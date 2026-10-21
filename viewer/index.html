@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>O2 Analyzer Assembly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-height 3D stage with a slim instrument-panel sidebar (stacks under the stage on phones). */
+:root {
+  --bg: #eef1f3;
+  --panel: #ffffff;
+  --stage: #dfe4e8;
+  --fg: #1b2329;
+  --muted: #5d6b75;
+  --line: #cfd6db;
+  --accent: #0b7a8f;
+  --accent-ink: #ffffff;
+  --o2: #0b7a8f;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171b; --panel: #192026; --stage: #0e1316; --fg: #e3e9ed; --muted: #8d9ba5;
+  --line: #2a343c; --accent: #3fc1d6; --accent-ink: #062027; --o2: #3fc1d6; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12171b; --panel: #192026; --stage: #0e1316; --fg: #e3e9ed; --muted: #8d9ba5;
+  --line: #2a343c; --accent: #3fc1d6; --accent-ink: #062027; --o2: #3fc1d6; color-scheme: dark }
+
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); }
+.app {
+  height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0;
+}
+.stage { position: relative; background: var(--stage); min-height: 0; overflow: hidden; }
+#c { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#c:active { cursor: grabbing; }
+.hint {
+  position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 14px;
+  font: 12px/1.4 var(--mono); color: var(--muted); pointer-events: none;
+}
+.loading {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font: 500 13px var(--mono); color: var(--muted); letter-spacing: .04em;
+}
+.loading[hidden] { display: none; }
+.back { font-size: 13px; color: var(--accent); }
+.side {
+  background: var(--panel); border-left: 1px solid var(--line);
+  padding-block: 20px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 20px; overflow-y: auto; min-height: 0;
+}
+h1 { margin: 0; font: 600 30px/1 var(--display); letter-spacing: .01em; text-wrap: balance; }
+h1 sub { font-size: .62em; vertical-align: -.12em; color: var(--o2); }
+.sub { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.label { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+button.v {
+  font: 500 13px var(--body); padding: 8px 4px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg);
+}
+button.v[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.v:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; align-items: center; gap: 10px; }
+.row input[type=range] { flex: 1; accent-color: var(--accent); }
+.val { font: 12px var(--mono); color: var(--muted); width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
+.toggles { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.toggles label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.toggles input { accent-color: var(--accent); width: 16px; height: 16px; }
+ul.parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ul.parts li { border-top: 1px solid var(--line); }
+ul.parts li:last-child { border-bottom: 1px solid var(--line); }
+.part { display: grid; grid-template-columns: 16px 12px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; font-size: 14px; }
+.part input { accent-color: var(--accent); margin: 0; }
+.sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,.25); }
+.tag { font: 11px var(--mono); color: var(--muted); }
+.part.ref .name { color: var(--muted); }
+.note { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 0; }
+.dims { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font: 12.5px var(--mono); margin: 0; font-variant-numeric: tabular-nums; }
+.dims dt { color: var(--muted); } .dims dd { margin: 0; }
+
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 58vh auto; height: auto; }
+  html, body { height: auto; }
+  .side { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <div class="stage">
+    <canvas id="c" aria-label="Rotatable 3D model of the O2 analyzer"></canvas>
+    <div class="loading" id="loading">Loading parts…</div>
+    <div class="hint">Drag to rotate · scroll or pinch to zoom · right-drag to pan</div>
+  </div>
+
+  <aside class="side">
+    <div>
+      <h1>O<sub>2</sub> Analyzer</h1>
+      <p class="sub">ESP32-2424S012 round display, ADS1115, 1S LiPo and an R-22D sensor in a Ø46 mm screw-cap body.</p>
+      <p class="sub"><a class="back" href="../simulator/">Try the display simulator →</a></p>
+    </div>
+
+    <section>
+      <p class="label">View</p>
+      <div class="views">
+        <button class="v" id="vAsm" aria-pressed="true">Assembled</button>
+        <button class="v" id="vExp" aria-pressed="false">Exploded</button>
+        <button class="v" id="vCut" aria-pressed="false">Cutaway</button>
+      </div>
+    </section>
+
+    <section>
+      <p class="label">Explode</p>
+      <div class="row"><input type="range" id="explode" min="0" max="100" value="0" aria-label="Explode amount"><span class="val" id="explodeVal">0%</span></div>
+    </section>
+
+    <section class="toggles">
+      <label><input type="checkbox" id="cut"> Cut in half</label>
+      <label><input type="checkbox" id="spin"> Auto-rotate</label>
+    </section>
+
+    <section>
+      <p class="label">Parts</p>
+      <ul class="parts" id="parts"></ul>
+    </section>
+
+    <section>
+      <p class="label">Envelope</p>
+      <dl class="dims">
+        <dt>Diameter</dt><dd>46.0 mm</dd>
+        <dt>Height</dt><dd>62.5 mm + 11.9 mm sensor nose</dd>
+        <dt>With diverter</dt><dd>83.2 mm</dd>
+        <dt>Cap thread</dt><dd>M42.4 × 2</dd>
+        <dt>Sensor thread</dt><dd>M16 × 1</dd>
+      </dl>
+    </section>
+
+    <p class="note">Grey names are reference stand-ins for bought parts and aren't printed.</p>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/STLLoader.js"></script>
+<script>
+const PARTS = [
+  { id: "bezel",    name: "Bezel",             color: 0x2b3036, dz:  24, print: true },
+  { id: "display",  name: "Round display",     color: 0x1d3f7a, dz:  15, ref: true },
+  { id: "button",   name: "Button plunger",    color: 0xe0a33a, dz:  15, print: true },
+  { id: "ads",      name: "ADS1115",           color: 0x6a3d9a, dz:   7, ref: true },
+  { id: "body",     name: "Body",              color: 0x3f6fa0, dz:   0, print: true },
+  { id: "battery",  name: "LiPo 602030",       color: 0xc9cdd2, dz: -14, ref: true },
+  { id: "retainer", name: "Sensor retainer",   color: 0xd9822b, dz: -24, print: true },
+  { id: "sensor",   name: "R-22D sensor",      color: 0x23272b, dz: -46, ref: true },
+  { id: "cap",      name: "Cap",               color: 0xd8dde1, dz: -96, print: true },
+  { id: "diverter", name: "Flow diverter",     color: 0x1f9e8f, dz:-126, print: true },
+];
+
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.localClippingEnabled = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 1, 5000);
+camera.up.set(0, 0, 1);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.75));
+const key = new THREE.DirectionalLight(0xffffff, 0.85); key.position.set(120, 160, 220); scene.add(key);
+const rim = new THREE.DirectionalLight(0xffffff, 0.35); rim.position.set(-150, -80, -60); scene.add(rim);
+const fill = new THREE.DirectionalLight(0xffffff, 0.25); fill.position.set(-60, 200, 40); scene.add(fill);
+
+const clip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);   // keeps y >= 0 when cut
+const group = new THREE.Group(); scene.add(group);
+const meshes = {};
+
+function themeBg() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue("--stage").trim() || "#dfe4e8";
+  scene.background = new THREE.Color(v);
+}
+themeBg();
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeBg); } catch (e) {}
+new MutationObserver(themeBg).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+// parts list
+const list = document.getElementById("parts");
+PARTS.forEach(p => {
+  const li = document.createElement("li");
+  li.innerHTML = `<label class="part${p.ref ? " ref" : ""}"><input type="checkbox" id="p-${p.id}" checked>` +
+    `<span class="sw" style="background:#${p.color.toString(16).padStart(6, "0")}"></span>` +
+    `<span class="name">${p.name}</span><span class="tag">${p.print ? "print" : "ref"}</span></label>`;
+  list.appendChild(li);
+  li.querySelector("input").addEventListener("change", e => { if (meshes[p.id]) meshes[p.id].visible = e.target.checked; });
+});
+
+const loader = new THREE.STLLoader();
+let loaded = 0;
+PARTS.forEach(p => {
+  fetch(`m/${p.id}.stl`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(buf => {
+    const geo = loader.parse(buf);
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({
+      color: p.color, roughness: p.id === "sensor" || p.id === "bezel" ? 0.55 : 0.7,
+      metalness: p.id === "battery" ? 0.45 : 0.05, side: THREE.DoubleSide, clippingPlanes: [],
+    });
+    const m = new THREE.Mesh(geo, mat);
+    m.userData = p;
+    meshes[p.id] = m;
+    group.add(m);
+    if (++loaded === PARTS.length) { document.getElementById("loading").hidden = true; applyExplode(); frame(true); }
+  }).catch(() => { document.getElementById("loading").textContent = `Couldn't load ${p.name}. Reload the page to try again.`; });
+});
+
+// explode
+let explodeT = 0, explodeTarget = 0;
+const explodeEl = document.getElementById("explode"), explodeVal = document.getElementById("explodeVal");
+function applyExplode() {
+  for (const id in meshes) meshes[id].position.z = meshes[id].userData.dz * explodeT;
+}
+explodeEl.addEventListener("input", () => { explodeTarget = explodeEl.value / 100; explodeVal.textContent = explodeEl.value + "%"; setView(null); });
+
+// cut
+const cutEl = document.getElementById("cut");
+function setCut(on) {
+  cutEl.checked = on;
+  for (const id in meshes) meshes[id].material.clippingPlanes = on ? [clip] : [];
+}
+cutEl.addEventListener("change", () => { setCut(cutEl.checked); setView(null); });
+
+// views
+const vb = { asm: document.getElementById("vAsm"), exp: document.getElementById("vExp"), cut: document.getElementById("vCut") };
+function setView(v) {
+  for (const k in vb) vb[k].setAttribute("aria-pressed", String(k === v));
+  if (!v) return;
+  if (v === "asm") { explodeTarget = 0; setCut(false); }
+  if (v === "exp") { explodeTarget = 1; setCut(false); }
+  if (v === "cut") { explodeTarget = 0; setCut(true); }
+  explodeEl.value = Math.round(explodeTarget * 100); explodeVal.textContent = explodeEl.value + "%";
+  frame(false, v);
+}
+vb.asm.onclick = () => setView("asm");
+vb.exp.onclick = () => setView("exp");
+vb.cut.onclick = () => setView("cut");
+
+const spinEl = document.getElementById("spin");
+spinEl.addEventListener("change", () => { controls.autoRotate = spinEl.checked; });
+controls.autoRotateSpeed = 1.6;
+
+// camera framing
+let camGoal = null;
+function frame(instant, v) {
+  const exploded = explodeTarget > 0.5;
+  const zMid = exploded ? -55 : -10;
+  const dist = exploded ? 520 : 260;
+  const dir = v === "cut" ? new THREE.Vector3(0.25, -1, 0.3) : new THREE.Vector3(0.9, 1.1, 0.55);
+  dir.normalize().multiplyScalar(dist);
+  const target = new THREE.Vector3(0, 0, zMid);
+  const pos = target.clone().add(dir);
+  if (instant) { controls.target.copy(target); camera.position.copy(pos); }
+  else camGoal = { target, pos };
+}
+
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(1, r.height);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas.parentElement);
+resize();
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function tick() {
+  const k = reduce ? 1 : 0.12;
+  if (Math.abs(explodeT - explodeTarget) > 1e-4) { explodeT += (explodeTarget - explodeT) * k; applyExplode(); }
+  if (camGoal) {
+    controls.target.lerp(camGoal.target, k); camera.position.lerp(camGoal.pos, k);
+    if (camera.position.distanceTo(camGoal.pos) < 0.5) camGoal = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+canvas.addEventListener("pointerdown", () => { camGoal = null; });
+canvas.addEventListener("wheel", () => { camGoal = null; }, { passive: true });
+frame(true);
+tick();
+</script>

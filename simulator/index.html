@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O2 Analyzer Simulator</title>
+<meta name="description" content="Browser simulator of the compact O2 analyzer firmware: the round display, touch controls, calibration and serial console, driven by a simulated galvanic sensor.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #eef1f3; --panel: #ffffff; --stage: #dfe4e8; --fg: #1b2329; --muted: #5d6b75;
+  --line: #cfd6db; --accent: #0b7a8f; --accent-ink: #ffffff; --o2: #0b7a8f;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171b; --panel: #192026; --stage: #0e1316; --fg: #e3e9ed; --muted: #8d9ba5;
+  --line: #2a343c; --accent: #3fc1d6; --accent-ink: #062027; --o2: #3fc1d6; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12171b; --panel: #192026; --stage: #0e1316; --fg: #e3e9ed; --muted: #8d9ba5;
+  --line: #2a343c; --accent: #3fc1d6; --accent-ink: #062027; --o2: #3fc1d6; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); line-height: 1.5; }
+a { color: var(--accent); }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+header.top { border-bottom: 1px solid var(--line); background: var(--panel); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; flex-wrap: wrap; }
+.brand { font: 600 26px/1 var(--display); letter-spacing: .01em; margin: 0; }
+.brand sub { font-size: .62em; vertical-align: -.12em; color: var(--o2); }
+nav { display: flex; gap: 6px; }
+nav a { font: 500 14px var(--body); text-decoration: none; color: var(--fg); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); }
+nav a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.intro { padding-block: 28px 8px; max-width: 70ch; }
+.intro h2 { font: 600 34px/1.05 var(--display); margin: 0 0 8px; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); }
+
+.sim { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; padding-block: 20px 8px; }
+.stage { background: var(--stage); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px 16px; }
+.puck {
+  width: min(400px, 100%); aspect-ratio: 1; border-radius: 50%; padding: 6.5%;
+  background: radial-gradient(circle at 35% 30%, #4a535c, #22272c 62%, #15191c);
+  box-shadow: 0 18px 40px rgba(0,0,0,.28), inset 0 2px 3px rgba(255,255,255,.12), inset 0 -3px 6px rgba(0,0,0,.5);
+}
+.glass { width: 100%; height: 100%; border-radius: 50%; background: #000; overflow: hidden; box-shadow: inset 0 0 0 2px #0a0c0e; position: relative; }
+.glass::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: linear-gradient(150deg, rgba(255,255,255,.08), rgba(255,255,255,0) 40%); }
+#lcd { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.touchhint { font: 12.5px/1.5 var(--mono); color: var(--muted); text-align: center; margin: 0; }
+.holdbar { width: min(220px, 70%); height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.holdbar i { display: block; height: 100%; width: 0; background: var(--accent); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.label { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; }
+.label b { font-weight: 500; color: var(--fg); letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+button { font: 500 13px var(--body); padding: 6px 10px; border-radius: 6px; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--fg); }
+button:hover { border-color: var(--accent); }
+button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+
+.serial { padding-block: 12px 8px; }
+.term { background: #0b0f12; color: #b9c7cf; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+.term .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-bottom: 1px solid #1f2830; }
+.term .bar span { font: 500 12px var(--mono); color: #8d9ba5; }
+.term .bar button { color: #e3e9ed; border-color: #2a343c; font-family: var(--mono); font-size: 12px; }
+.term .bar button:hover { border-color: #3fc1d6; }
+#log { margin: 0; padding: 10px 12px; height: 180px; overflow-y: auto; font: 12px/1.55 var(--mono); white-space: pre; }
+#log .cmd { color: #3fc1d6; }
+.term form { display: flex; border-top: 1px solid #1f2830; }
+.term input { flex: 1; min-width: 0; background: transparent; border: 0; color: #e3e9ed; font: 12.5px var(--mono); padding: 10px 12px; }
+.term input::placeholder { color: #5d6b75; }
+.term form button { border: 0; border-left: 1px solid #1f2830; border-radius: 0; color: #e3e9ed; font-family: var(--mono); }
+
+section.more { padding-block: 28px 48px; }
+section.more h3 { font: 600 24px/1.1 var(--display); margin: 0 0 12px; }
+.steps { margin: 0 0 28px; padding-left: 1.3em; max-width: 72ch; }
+.steps li { margin-bottom: 6px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.gallery figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.gallery img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: contain; background: #fff; }
+.gallery figcaption { font-size: 13px; padding: 8px 10px; color: var(--muted); }
+.cta { display: inline-block; margin-top: 18px; font-weight: 500; text-decoration: none; background: var(--accent); color: var(--accent-ink); padding: 9px 16px; border-radius: 8px; }
+
+@media (max-width: 860px) {
+  .sim { grid-template-columns: 1fr; }
+  .stage { padding: 24px 12px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <h1 class="brand">O<sub>2</sub> Analyzer</h1>
+    <nav aria-label="Pages">
+      <a href="./" aria-current="page">Simulator</a>
+      <a href="../viewer/">3D model</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="intro">
+    <h2>Try the analyzer without the hardware</h2>
+    <p>The screen below runs the device firmware's display, touch, and calibration code, ported to the browser. A simulated galvanic sensor feeds it, so readings settle the way a real cell does.</p>
+  </div>
+
+  <div class="sim">
+    <div class="stage">
+      <div class="puck"><div class="glass"><canvas id="lcd" width="480" height="480" aria-label="Simulated 240 by 240 round display. Tap to switch pages, hold for 1.5 seconds to calibrate to air."></canvas></div></div>
+      <div class="holdbar" aria-hidden="true"><i id="hold"></i></div>
+      <p class="touchhint">Tap the screen to switch pages · Hold 1.5 s to calibrate to air</p>
+    </div>
+
+    <div class="panel">
+      <section>
+        <p class="label"><span>Gas at the sensor</span><b id="gasVal">20.9 % O₂</b></p>
+        <input type="range" id="gas" min="0" max="100" step="0.1" value="20.9" aria-label="Oxygen fraction of the gas at the sensor">
+        <div class="chips" id="presets">
+          <button data-o2="20.9" aria-pressed="true">Air</button>
+          <button data-o2="32">EAN32</button>
+          <button data-o2="36">EAN36</button>
+          <button data-o2="50">EAN50</button>
+          <button data-o2="100">O₂</button>
+        </div>
+      </section>
+
+      <section>
+        <p class="label"><span>Sensor output in air</span><b id="cellVal">10.5 mV</b></p>
+        <input type="range" id="cell" min="0" max="16" step="0.1" value="10.5" aria-label="Sensor output in air, millivolts">
+        <p class="note" id="cellNote">A healthy cell reads 8–14 mV in air. Below 7 mV the firmware flags it as weak. Set it to 0 to unplug the sensor.</p>
+      </section>
+
+      <section>
+        <p class="label"><span>Battery</span><b id="battVal">3.95 V</b></p>
+        <input type="range" id="batt" min="3.30" max="4.20" step="0.01" value="3.95" aria-label="Battery voltage">
+      </section>
+
+      <section>
+        <p class="label"><span>Hardware</span></p>
+        <div class="row">
+          <label class="check"><input type="checkbox" id="adc" checked> ADS1115 wired</label>
+          <button id="reboot">Power cycle</button>
+        </div>
+        <p class="note">The firmware only looks for the ADC at boot, so power-cycle after changing it. Calibration survives a power cycle, as it does in the device's flash.</p>
+      </section>
+    </div>
+  </div>
+
+  <section class="serial" aria-label="Serial monitor">
+    <div class="term">
+      <div class="bar">
+        <span>Serial monitor · 115200 baud</span>
+        <div class="row">
+          <button data-send="c" title="Calibrate to air (20.9 %)">c · cal air</button>
+          <button data-send="o" title="Calibrate to 100 % O2">o · cal O₂</button>
+          <button data-send="r" title="Reset calibration">r · reset</button>
+        </div>
+      </div>
+      <pre id="log" aria-live="off"></pre>
+      <form id="tx"><input id="txIn" autocomplete="off" spellcheck="false" placeholder="Type c, o or r and press Enter" aria-label="Send to serial"><button>Send</button></form>
+    </div>
+  </section>
+
+  <section class="more">
+    <h3>Things to try</h3>
+    <ol class="steps">
+      <li>On first boot the status line says <b>HOLD: CAL AIR</b>. With the gas set to Air, hold the screen until it shows <b>CAL 20.9% OK</b>.</li>
+      <li>Switch the gas to EAN32. The ring turns orange and the status reads <b>SETTLING</b> while the cell responds, then <b>STABLE</b> once readings hold within 0.15 % for 2 s. The MOD line shows depths at PO₂ 1.4 and 1.6.</li>
+      <li>Tap the screen for the detail page: raw millivolts, calibration values, and battery voltage.</li>
+      <li>Drop the sensor output below 7 mV and recalibrate to see the weak-sensor warning. Untick the ADS1115 and power-cycle to see <b>NO ADC</b>.</li>
+      <li>For a two-point calibration, calibrate in air, switch to O₂, wait for it to settle, then send <code>o</code> from the serial monitor.</li>
+    </ol>
+
+    <h3>The enclosure</h3>
+    <div class="gallery">
+      <figure><img src="../renders/assembly.png" alt="Assembled analyzer" loading="lazy"><figcaption>Assembled</figcaption></figure>
+      <figure><img src="../renders/exploded.png" alt="Exploded view of all parts" loading="lazy"><figcaption>Exploded</figcaption></figure>
+      <figure><img src="../renders/section.png" alt="Cross-section of the body and cap" loading="lazy"><figcaption>Cross-section</figcaption></figure>
+      <figure><img src="../renders/battery_latch.png" alt="Battery pocket spring latches" loading="lazy"><figcaption>Battery latches</figcaption></figure>
+      <figure><img src="../renders/diverter.png" alt="Cylinder flow diverter" loading="lazy"><figcaption>Flow diverter</figcaption></figure>
+      <figure><img src="../renders/diverter_section.png" alt="Cross-section of the flow diverter" loading="lazy"><figcaption>Diverter section</figcaption></figure>
+    </div>
+    <a class="cta" href="../viewer/">Open the interactive 3D model →</a>
+  </section>
+</main>
+
+<script>
+/* Classic 5x7 GFX font (Arduino_GFX font/glcdfont.h): 5 column bytes per char, bit 0 = top row. */
+const FONT = [
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x3E, 0x5B, 0x4F, 0x5B, 0x3E, 0x3E, 0x6B, 0x4F, 0x6B, 0x3E, 0x1C, 0x3E, 0x7C, 0x3E, 0x1C,
+  0x18, 0x3C, 0x7E, 0x3C, 0x18, 0x1C, 0x57, 0x7D, 0x57, 0x1C, 0x1C, 0x5E, 0x7F, 0x5E, 0x1C, 0x00, 0x18, 0x3C, 0x18, 0x00,
+  0xFF, 0xE7, 0xC3, 0xE7, 0xFF, 0x00, 0x18, 0x24, 0x18, 0x00, 0xFF, 0xE7, 0xDB, 0xE7, 0xFF, 0x30, 0x48, 0x3A, 0x06, 0x0E,
+  0x26, 0x29, 0x79, 0x29, 0x26, 0x40, 0x7F, 0x05, 0x05, 0x07, 0x40, 0x7F, 0x05, 0x25, 0x3F, 0x5A, 0x3C, 0xE7, 0x3C, 0x5A,
+  0x7F, 0x3E, 0x1C, 0x1C, 0x08, 0x08, 0x1C, 0x1C, 0x3E, 0x7F, 0x14, 0x22, 0x7F, 0x22, 0x14, 0x5F, 0x5F, 0x00, 0x5F, 0x5F,
+  0x06, 0x09, 0x7F, 0x01, 0x7F, 0x00, 0x66, 0x89, 0x95, 0x6A, 0x60, 0x60, 0x60, 0x60, 0x60, 0x94, 0xA2, 0xFF, 0xA2, 0x94,
+  0x08, 0x04, 0x7E, 0x04, 0x08, 0x10, 0x20, 0x7E, 0x20, 0x10, 0x08, 0x08, 0x2A, 0x1C, 0x08, 0x08, 0x1C, 0x2A, 0x08, 0x08,
+  0x1E, 0x10, 0x10, 0x10, 0x10, 0x0C, 0x1E, 0x0C, 0x1E, 0x0C, 0x30, 0x38, 0x3E, 0x38, 0x30, 0x06, 0x0E, 0x3E, 0x0E, 0x06,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5F, 0x00, 0x00, 0x00, 0x07, 0x00, 0x07, 0x00, 0x14, 0x7F, 0x14, 0x7F, 0x14,
+  0x24, 0x2A, 0x7F, 0x2A, 0x12, 0x23, 0x13, 0x08, 0x64, 0x62, 0x36, 0x49, 0x56, 0x20, 0x50, 0x00, 0x08, 0x07, 0x03, 0x00,
+  0x00, 0x1C, 0x22, 0x41, 0x00, 0x00, 0x41, 0x22, 0x1C, 0x00, 0x2A, 0x1C, 0x7F, 0x1C, 0x2A, 0x08, 0x08, 0x3E, 0x08, 0x08,
+  0x00, 0x80, 0x70, 0x30, 0x00, 0x08, 0x08, 0x08, 0x08, 0x08, 0x00, 0x00, 0x60, 0x60, 0x00, 0x20, 0x10, 0x08, 0x04, 0x02,
+  0x3E, 0x51, 0x49, 0x45, 0x3E, 0x00, 0x42, 0x7F, 0x40, 0x00, 0x72, 0x49, 0x49, 0x49, 0x46, 0x21, 0x41, 0x49, 0x4D, 0x33,
+  0x18, 0x14, 0x12, 0x7F, 0x10, 0x27, 0x45, 0x45, 0x45, 0x39, 0x3C, 0x4A, 0x49, 0x49, 0x31, 0x41, 0x21, 0x11, 0x09, 0x07,
+  0x36, 0x49, 0x49, 0x49, 0x36, 0x46, 0x49, 0x49, 0x29, 0x1E, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x40, 0x34, 0x00, 0x00,
+  0x00, 0x08, 0x14, 0x22, 0x41, 0x14, 0x14, 0x14, 0x14, 0x14, 0x00, 0x41, 0x22, 0x14, 0x08, 0x02, 0x01, 0x59, 0x09, 0x06,
+  0x3E, 0x41, 0x5D, 0x59, 0x4E, 0x7C, 0x12, 0x11, 0x12, 0x7C, 0x7F, 0x49, 0x49, 0x49, 0x36, 0x3E, 0x41, 0x41, 0x41, 0x22,
+  0x7F, 0x41, 0x41, 0x41, 0x3E, 0x7F, 0x49, 0x49, 0x49, 0x41, 0x7F, 0x09, 0x09, 0x09, 0x01, 0x3E, 0x41, 0x41, 0x51, 0x73,
+  0x7F, 0x08, 0x08, 0x08, 0x7F, 0x00, 0x41, 0x7F, 0x41, 0x00, 0x20, 0x40, 0x41, 0x3F, 0x01, 0x7F, 0x08, 0x14, 0x22, 0x41,
+  0x7F, 0x40, 0x40, 0x40, 0x40, 0x7F, 0x02, 0x1C, 0x02, 0x7F, 0x7F, 0x04, 0x08, 0x10, 0x7F, 0x3E, 0x41, 0x41, 0x41, 0x3E,
+  0x7F, 0x09, 0x09, 0x09, 0x06, 0x3E, 0x41, 0x51, 0x21, 0x5E, 0x7F, 0x09, 0x19, 0x29, 0x46, 0x26, 0x49, 0x49, 0x49, 0x32,
+  0x03, 0x01, 0x7F, 0x01, 0x03, 0x3F, 0x40, 0x40, 0x40, 0x3F, 0x1F, 0x20, 0x40, 0x20, 0x1F, 0x3F, 0x40, 0x38, 0x40, 0x3F,
+  0x63, 0x14, 0x08, 0x14, 0x63, 0x03, 0x04, 0x78, 0x04, 0x03, 0x61, 0x59, 0x49, 0x4D, 0x43, 0x00, 0x7F, 0x41, 0x41, 0x41,
+  0x02, 0x04, 0x08, 0x10, 0x20, 0x00, 0x41, 0x41, 0x41, 0x7F, 0x04, 0x02, 0x01, 0x02, 0x04, 0x40, 0x40, 0x40, 0x40, 0x40,
+  0x00, 0x03, 0x07, 0x08, 0x00, 0x20, 0x54, 0x54, 0x78, 0x40, 0x7F, 0x28, 0x44, 0x44, 0x38, 0x38, 0x44, 0x44, 0x44, 0x28,
+  0x38, 0x44, 0x44, 0x28, 0x7F, 0x38, 0x54, 0x54, 0x54, 0x18, 0x00, 0x08, 0x7E, 0x09, 0x02, 0x18, 0xA4, 0xA4, 0x9C, 0x78,
+  0x7F, 0x08, 0x04, 0x04, 0x78, 0x00, 0x44, 0x7D, 0x40, 0x00, 0x20, 0x40, 0x40, 0x3D, 0x00, 0x7F, 0x10, 0x28, 0x44, 0x00,
+  0x00, 0x41, 0x7F, 0x40, 0x00, 0x7C, 0x04, 0x78, 0x04, 0x78, 0x7C, 0x08, 0x04, 0x04, 0x78, 0x38, 0x44, 0x44, 0x44, 0x38,
+  0xFC, 0x18, 0x24, 0x24, 0x18, 0x18, 0x24, 0x24, 0x18, 0xFC, 0x7C, 0x08, 0x04, 0x04, 0x08, 0x48, 0x54, 0x54, 0x54, 0x24,
+  0x04, 0x04, 0x3F, 0x44, 0x24, 0x3C, 0x40, 0x40, 0x20, 0x7C, 0x1C, 0x20, 0x40, 0x20, 0x1C, 0x3C, 0x40, 0x30, 0x40, 0x3C,
+  0x44, 0x28, 0x10, 0x28, 0x44, 0x4C, 0x90, 0x90, 0x90, 0x7C, 0x44, 0x64, 0x54, 0x4C, 0x44, 0x00, 0x08, 0x36, 0x41, 0x00,
+  0x00, 0x00, 0x77, 0x00, 0x00, 0x00, 0x41, 0x36, 0x08, 0x00, 0x02, 0x01, 0x02, 0x04, 0x02, 0x3C, 0x26, 0x23, 0x26, 0x3C,
+  0x1E, 0xA1, 0xA1, 0x61, 0x12, 0x3A, 0x40, 0x40, 0x20, 0x7A, 0x38, 0x54, 0x54, 0x55, 0x59, 0x21, 0x55, 0x55, 0x79, 0x41,
+  0x22, 0x54, 0x54, 0x78, 0x42, 0x21, 0x55, 0x54, 0x78, 0x40, 0x20, 0x54, 0x55, 0x79, 0x40, 0x0C, 0x1E, 0x52, 0x72, 0x12,
+  0x39, 0x55, 0x55, 0x55, 0x59, 0x39, 0x54, 0x54, 0x54, 0x59, 0x39, 0x55, 0x54, 0x54, 0x58, 0x00, 0x00, 0x45, 0x7C, 0x41,
+  0x00, 0x02, 0x45, 0x7D, 0x42, 0x00, 0x01, 0x45, 0x7C, 0x40, 0x7D, 0x12, 0x11, 0x12, 0x7D, 0xF0, 0x28, 0x25, 0x28, 0xF0,
+  0x7C, 0x54, 0x55, 0x45, 0x00, 0x20, 0x54, 0x54, 0x7C, 0x54, 0x7C, 0x0A, 0x09, 0x7F, 0x49, 0x32, 0x49, 0x49, 0x49, 0x32,
+  0x3A, 0x44, 0x44, 0x44, 0x3A, 0x32, 0x4A, 0x48, 0x48, 0x30, 0x3A, 0x41, 0x41, 0x21, 0x7A, 0x3A, 0x42, 0x40, 0x20, 0x78,
+  0x00, 0x9D, 0xA0, 0xA0, 0x7D, 0x3D, 0x42, 0x42, 0x42, 0x3D, 0x3D, 0x40, 0x40, 0x40, 0x3D, 0x3C, 0x24, 0xFF, 0x24, 0x24,
+  0x48, 0x7E, 0x49, 0x43, 0x66, 0x2B, 0x2F, 0xFC, 0x2F, 0x2B, 0xFF, 0x09, 0x29, 0xF6, 0x20, 0xC0, 0x88, 0x7E, 0x09, 0x03,
+  0x20, 0x54, 0x54, 0x79, 0x41, 0x00, 0x00, 0x44, 0x7D, 0x41, 0x30, 0x48, 0x48, 0x4A, 0x32, 0x38, 0x40, 0x40, 0x22, 0x7A,
+  0x00, 0x7A, 0x0A, 0x0A, 0x72, 0x7D, 0x0D, 0x19, 0x31, 0x7D, 0x26, 0x29, 0x29, 0x2F, 0x28, 0x26, 0x29, 0x29, 0x29, 0x26,
+  0x30, 0x48, 0x4D, 0x40, 0x20, 0x38, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x38, 0x2F, 0x10, 0xC8, 0xAC, 0xBA,
+  0x2F, 0x10, 0x28, 0x34, 0xFA, 0x00, 0x00, 0x7B, 0x00, 0x00, 0x08, 0x14, 0x2A, 0x14, 0x22, 0x22, 0x14, 0x2A, 0x14, 0x08,
+  0x55, 0x00, 0x55, 0x00, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0xFF, 0x55, 0xFF, 0x55, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00,
+  0x10, 0x10, 0x10, 0xFF, 0x00, 0x14, 0x14, 0x14, 0xFF, 0x00, 0x10, 0x10, 0xFF, 0x00, 0xFF, 0x10, 0x10, 0xF0, 0x10, 0xF0,
+  0x14, 0x14, 0x14, 0xFC, 0x00, 0x14, 0x14, 0xF7, 0x00, 0xFF, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x14, 0x14, 0xF4, 0x04, 0xFC,
+  0x14, 0x14, 0x17, 0x10, 0x1F, 0x10, 0x10, 0x1F, 0x10, 0x1F, 0x14, 0x14, 0x14, 0x1F, 0x00, 0x10, 0x10, 0x10, 0xF0, 0x00,
+  0x00, 0x00, 0x00, 0x1F, 0x10, 0x10, 0x10, 0x10, 0x1F, 0x10, 0x10, 0x10, 0x10, 0xF0, 0x10, 0x00, 0x00, 0x00, 0xFF, 0x10,
+  0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0xFF, 0x10, 0x00, 0x00, 0x00, 0xFF, 0x14, 0x00, 0x00, 0xFF, 0x00, 0xFF,
+  0x00, 0x00, 0x1F, 0x10, 0x17, 0x00, 0x00, 0xFC, 0x04, 0xF4, 0x14, 0x14, 0x17, 0x10, 0x17, 0x14, 0x14, 0xF4, 0x04, 0xF4,
+  0x00, 0x00, 0xFF, 0x00, 0xF7, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0xF7, 0x00, 0xF7, 0x14, 0x14, 0x14, 0x17, 0x14,
+  0x10, 0x10, 0x1F, 0x10, 0x1F, 0x14, 0x14, 0x14, 0xF4, 0x14, 0x10, 0x10, 0xF0, 0x10, 0xF0, 0x00, 0x00, 0x1F, 0x10, 0x1F,
+  0x00, 0x00, 0x00, 0x1F, 0x14, 0x00, 0x00, 0x00, 0xFC, 0x14, 0x00, 0x00, 0xF0, 0x10, 0xF0, 0x10, 0x10, 0xFF, 0x10, 0xFF,
+  0x14, 0x14, 0x14, 0xFF, 0x14, 0x10, 0x10, 0x10, 0x1F, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+  0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x0F, 0x0F, 0x0F, 0x0F, 0x0F,
+  0x38, 0x44, 0x44, 0x38, 0x44, 0xFC, 0x4A, 0x4A, 0x4A, 0x34, 0x7E, 0x02, 0x02, 0x06, 0x06, 0x02, 0x7E, 0x02, 0x7E, 0x02,
+  0x63, 0x55, 0x49, 0x41, 0x63, 0x38, 0x44, 0x44, 0x3C, 0x04, 0x40, 0x7E, 0x20, 0x1E, 0x20, 0x06, 0x02, 0x7E, 0x02, 0x02,
+  0x99, 0xA5, 0xE7, 0xA5, 0x99, 0x1C, 0x2A, 0x49, 0x2A, 0x1C, 0x4C, 0x72, 0x01, 0x72, 0x4C, 0x30, 0x4A, 0x4D, 0x4D, 0x30,
+  0x30, 0x48, 0x78, 0x48, 0x30, 0xBC, 0x62, 0x5A, 0x46, 0x3D, 0x3E, 0x49, 0x49, 0x49, 0x00, 0x7E, 0x01, 0x01, 0x01, 0x7E,
+  0x2A, 0x2A, 0x2A, 0x2A, 0x2A, 0x44, 0x44, 0x5F, 0x44, 0x44, 0x40, 0x51, 0x4A, 0x44, 0x40, 0x40, 0x44, 0x4A, 0x51, 0x40,
+  0x00, 0x00, 0xFF, 0x01, 0x03, 0xE0, 0x80, 0xFF, 0x00, 0x00, 0x08, 0x08, 0x6B, 0x6B, 0x08, 0x36, 0x12, 0x36, 0x24, 0x36,
+  0x00, 0x06, 0x09, 0x09, 0x06, 0x00, 0x00, 0x18, 0x18, 0x00, 0x00, 0x00, 0x10, 0x10, 0x00, 0x30, 0x40, 0xFF, 0x01, 0x01,
+  0x00, 0x1F, 0x01, 0x01, 0x1E, 0x00, 0x19, 0x1D, 0x17, 0x12, 0x00, 0x3C, 0x3C, 0x3C, 0x3C, 0x00, 0x00, 0x00, 0x00, 0x00,
+];
+
+/* ---------- Firmware constants (O2_Analyzer.ino) ---------- */
+const AIR_O2 = 20.9, BATT_DIVIDER = 2.0, SENSOR_MIN_MV = 7.0;
+const STABLE_BAND_PCT = 0.15, SAMPLE_MS = 100, AVG_N = 20;
+const C_BG = 0x0000, C_FG = 0xFFFF, C_DIM = 0x52AA, C_ACCENT = 0x07FF, C_OK = 0x07E0, C_WARN = 0xFD20, C_BAD = 0xF800;
+const SEG = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F];
+
+/* ---------- Simulated hardware ---------- */
+const hw = { gasO2: 20.9, cellAirMv: 10.5, battV: 3.95, adcWired: true, touching: false, cellMv: 10.5 };
+const CELL_TAU_S = 3.0;      // first-order response: ~7 s to 90 %
+const NOISE_MV = 0.006;
+const LSB16_MV = 0.0078125;  // ADS1115 at GAIN_SIXTEEN
+const LSB1_V = 0.000125;     // ADS1115 at GAIN_ONE
+
+function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function readDiffMv() {
+  const mv = hw.cellMv + gauss() * NOISE_MV;
+  return Math.max(-256, Math.min(256, Math.round(mv / LSB16_MV) * LSB16_MV));
+}
+function readBattAdcV() { return Math.round((hw.battV / BATT_DIVIDER + gauss() * 0.0004) / LSB1_V) * LSB1_V; }
+
+/* Preferences ("o2cal") — kept in localStorage when available */
+const prefs = {
+  get(k) { try { const v = parseFloat(localStorage.getItem("o2sim." + k)); return isNaN(v) ? 0 : v; } catch (e) { return 0; } },
+  put(k, v) { try { localStorage.setItem("o2sim." + k, String(v)); } catch (e) {} },
+};
+
+/* ---------- Firmware state ---------- */
+let bootAt = performance.now();
+const millis = () => performance.now() - bootAt;
+let calMv, calO2Mv, buf, bufIdx, bufCnt, mvNow, o2Now, battV, adsOk, page, msgUntil, msg;
+let tSample, tDraw, bdiv, touch;
+
+/* ---------- Display: 240x240 framebuffer drawn at 2x ---------- */
+const lcd = document.getElementById("lcd");
+const ctx = lcd.getContext("2d");
+ctx.scale(2, 2);
+function rgb(c) {
+  const r = (c >> 11) & 31, g = (c >> 5) & 63, b = c & 31;
+  return `rgb(${Math.round(r * 255 / 31)},${Math.round(g * 255 / 63)},${Math.round(b * 255 / 31)})`;
+}
+function rrPath(x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+const gfx = {
+  cx: 0, cy: 0, size: 1, color: C_FG,
+  fillScreen(c) { ctx.fillStyle = rgb(c); ctx.fillRect(0, 0, 240, 240); },
+  fillRect(x, y, w, h, c) { ctx.fillStyle = rgb(c); ctx.fillRect(x, y, w, h); },
+  fillRoundRect(x, y, w, h, r, c) { if (w <= 0 || h <= 0) return; ctx.fillStyle = rgb(c); rrPath(x, y, w, h, r); ctx.fill(); },
+  drawRoundRect(x, y, w, h, r, c) { ctx.strokeStyle = rgb(c); ctx.lineWidth = 1; rrPath(x + .5, y + .5, w - 1, h - 1, r); ctx.stroke(); },
+  fillCircle(x, y, r, c) { ctx.fillStyle = rgb(c); ctx.beginPath(); ctx.arc(x + .5, y + .5, r + .5, 0, 2 * Math.PI); ctx.fill(); },
+  fillArc(x, y, r1, r2, start, end, c) {
+    const a0 = start * Math.PI / 180, a1 = end * Math.PI / 180;
+    ctx.fillStyle = rgb(c); ctx.beginPath();
+    ctx.arc(x + .5, y + .5, r1 + .5, a0, a1, false);
+    ctx.arc(x + .5, y + .5, r2 - .5, a1, a0, true);
+    ctx.closePath(); ctx.fill();
+  },
+  setTextSize(s) { this.size = s; },
+  setTextColor(c) { this.color = c; },
+  setCursor(x, y) { this.cx = x; this.cy = y; },
+  print(str) {
+    const s = this.size;
+    ctx.fillStyle = rgb(this.color);
+    for (const ch of String(str)) {
+      const code = ch.charCodeAt(0) & 0xFF;
+      for (let i = 0; i < 5; i++) {
+        let line = FONT[code * 5 + i];
+        for (let j = 0; j < 8; j++, line >>= 1) if (line & 1) ctx.fillRect(this.cx + i * s, this.cy + j * s, s, s);
+      }
+      this.cx += 6 * s;
+    }
+  },
+  flush() {},
+};
+
+/* ---------- Ported firmware ---------- */
+function drawSeg7(x, y, w, h, t, d, col) {
+  const h2 = Math.trunc(h / 2), ht = Math.trunc(t / 2);
+  const s = d < 0 ? 0x40 : SEG[d];
+  const H = (xx, yy) => gfx.fillRoundRect(xx + ht, yy - ht, w - t, t, ht, col);
+  const V = (xx, yy, len) => gfx.fillRoundRect(xx - ht, yy + ht, t, len - t, ht, col);
+  if (s & 0x01) H(x, y);
+  if (s & 0x02) V(x + w, y, h2);
+  if (s & 0x04) V(x + w, y + h2, h2);
+  if (s & 0x08) H(x, y + h);
+  if (s & 0x10) V(x, y + h2, h2);
+  if (s & 0x20) V(x, y, h2);
+  if (s & 0x40) H(x, y + h2);
+}
+
+function drawBigNumber(v, cx, y, col, valid) {
+  const w = 34, h = 70, t = 9, gap = 12;
+  const digits = [-1, -1, -1];
+  let hundred = false;
+  if (valid) {
+    let tenths = Math.round(v * 10);
+    tenths = Math.max(0, Math.min(1000, tenths));
+    if (tenths >= 1000) hundred = true;
+    digits[0] = Math.trunc(tenths / 100) % 10; digits[1] = Math.trunc(tenths / 10) % 10; digits[2] = tenths % 10;
+  }
+  if (hundred) {
+    const total = 3 * w + 2 * gap; let x = cx - Math.trunc(total / 2);
+    drawSeg7(x, y, w, h, t, 1, col); drawSeg7(x + w + gap, y, w, h, t, 0, col); drawSeg7(x + 2 * (w + gap), y, w, h, t, 0, col);
+    return;
+  }
+  const dotW = 14;
+  const total = 3 * w + 2 * gap + dotW;
+  let x = cx - Math.trunc(total / 2);
+  if (!valid || digits[0] !== 0) drawSeg7(x, y, w, h, t, digits[0], col);
+  x += w + gap;
+  drawSeg7(x, y, w, h, t, digits[1], col);
+  x += w + gap / 2;
+  gfx.fillCircle(x + dotW / 2, y + h - 1, Math.trunc(t / 2) + 1, col);
+  x += dotW + gap / 2;
+  drawSeg7(x, y, w, h, t, digits[2], col);
+}
+
+function centerText(s, y, size, col) {
+  gfx.setTextSize(size); gfx.setTextColor(col);
+  const w = s.length * 6 * size;
+  gfx.setCursor(120 - Math.trunc(w / 2), y);
+  gfx.print(s);
+}
+
+function battPercent(v) {
+  const tbl = [[4.20, 100], [4.10, 90], [4.00, 80], [3.90, 66], [3.80, 52], [3.75, 42], [3.70, 32], [3.65, 20], [3.55, 10], [3.40, 3], [3.30, 0]];
+  if (v >= tbl[0][0]) return 100;
+  for (let i = 1; i < 11; i++)
+    if (v >= tbl[i][0]) return Math.trunc(tbl[i][1] + (v - tbl[i][0]) * (tbl[i - 1][1] - tbl[i][1]) / (tbl[i - 1][0] - tbl[i][0]));
+  return 0;
+}
+
+function mvToO2(mv) {
+  if (calMv <= 0) return NaN;
+  if (calO2Mv > calMv + 1.0) {
+    const slope = (100.0 - AIR_O2) / (calO2Mv - calMv);
+    return AIR_O2 + (mv - calMv) * slope;
+  }
+  return mv * AIR_O2 / calMv;
+}
+
+function flash(s) { msg = s.slice(0, 23); msgUntil = millis() + 2500; }
+function saveCal() { prefs.put("air", calMv); prefs.put("o2", calO2Mv); }
+function avgMv() { let s = 0; for (let i = 0; i < bufCnt; i++) s += buf[i]; return bufCnt ? s / bufCnt : 0; }
+
+function isStable() {
+  if (bufCnt < AVG_N || calMv <= 0) return false;
+  let lo = 1e9, hi = -1e9;
+  for (let i = 0; i < bufCnt; i++) { lo = Math.min(lo, buf[i]); hi = Math.max(hi, buf[i]); }
+  return (hi - lo) * AIR_O2 / calMv < STABLE_BAND_PCT;
+}
+
+function calibrateAir() {
+  const mv = avgMv();
+  if (mv < SENSOR_MIN_MV * 0.5) { flash("CAL FAILED"); return; }
+  calMv = mv; saveCal();
+  flash(mv < SENSOR_MIN_MV ? "CAL: WEAK SENSOR" : "CAL 20.9% OK");
+}
+
+function calibrateO2() {
+  const mv = avgMv();
+  if (calMv <= 0 || mv < calMv * 3) { flash("O2 CAL FAILED"); return; }
+  calO2Mv = mv; saveCal(); flash("CAL 100% OK");
+}
+
+const f = (v, d) => isNaN(v) ? "nan" : v.toFixed(d);
+
+function drawScreen() {
+  gfx.fillScreen(C_BG);
+  const valid = adsOk && calMv > 0 && !isNaN(o2Now);
+  const stable = isStable();
+  const sensorWeak = calMv > 0 && calMv < SENSOR_MIN_MV;
+
+  const frac = valid ? Math.max(0, Math.min(1, o2Now / 100)) : 0;
+  gfx.fillArc(120, 120, 119, 111, 135, 405, 0x2104);
+  if (frac > 0) gfx.fillArc(120, 120, 119, 111, 135, 135 + 270 * frac, stable ? C_ACCENT : C_WARN);
+
+  if (BATT_DIVIDER > 0 && battV > 2.5) {
+    const p = battPercent(battV);
+    const c = p > 25 ? C_OK : (p > 10 ? C_WARN : C_BAD);
+    gfx.drawRoundRect(100, 26, 34, 14, 3, C_DIM);
+    gfx.fillRect(134, 30, 3, 6, C_DIM);
+    gfx.fillRect(102, 28, Math.max(1, Math.trunc(30 * p / 100)), 10, c);
+    gfx.setTextSize(1); gfx.setTextColor(C_DIM); gfx.setCursor(140, 30); gfx.print(p + "%");
+  }
+
+  if (page === 0) {
+    centerText("O2", 50, 2, C_DIM);
+    drawBigNumber(o2Now, 112, 76, valid ? (sensorWeak ? C_WARN : C_FG) : C_DIM, valid);
+    gfx.setTextSize(3); gfx.setTextColor(C_DIM); gfx.setCursor(180, 120); gfx.print("%");
+    if (valid) {
+      const fo2 = o2Now / 100;
+      if (fo2 > 0.05) {
+        const mod14 = Math.trunc((1.4 / fo2 - 1) * 33.0);
+        const mod16 = Math.trunc((1.6 / fo2 - 1) * 33.0);
+        centerText(`MOD ${Math.max(0, mod14)} / ${Math.max(0, mod16)} ft`, 160, 2, C_FG);
+        centerText("@1.4      @1.6", 180, 1, C_DIM);
+      }
+    }
+  } else {
+    centerText("DETAIL", 44, 2, C_DIM);
+    centerText(`${f(mvNow, 2)} mV`, 76, 3, C_FG);
+    centerText(`air cal ${f(calMv, 2)} mV`, 116, 1, C_DIM);
+    if (calO2Mv > 0) centerText(`O2 cal ${f(calO2Mv, 2)} mV`, 130, 1, C_DIM);
+    centerText(valid ? `${f(o2Now, 1)} %` : "--", 146, 2, C_FG);
+    if (BATT_DIVIDER > 0) centerText(`batt ${f(battV, 2)} V`, 172, 1, C_DIM);
+  }
+
+  let st, sc;
+  if (!adsOk)                { st = "NO ADC";        sc = C_BAD; }
+  else if (calMv <= 0)       { st = "HOLD: CAL AIR"; sc = C_WARN; }
+  else if (mvNow < 0.3)      { st = "NO SENSOR";     sc = C_BAD; }
+  else if (sensorWeak)       { st = "SENSOR WEAK";   sc = C_WARN; }
+  else if (stable)           { st = "STABLE";        sc = C_OK; }
+  else                       { st = "SETTLING";      sc = C_WARN; }
+  if (millis() < msgUntil)   { st = msg;             sc = C_ACCENT; }
+  centerText(st, 200, 1, sc);
+  gfx.flush();
+}
+
+function setup() {
+  bootAt = performance.now();
+  buf = new Array(AVG_N).fill(0); bufIdx = 0; bufCnt = 0;
+  mvNow = 0; o2Now = 0; battV = 0; page = 0; msgUntil = 0; msg = "";
+  tSample = 0; tDraw = 0; bdiv = 0;
+  touch = { down: false, downAt: 0, longDone: false };
+  gfx.fillScreen(C_BG);
+  adsOk = hw.adcWired;
+  calMv = prefs.get("air");
+  calO2Mv = prefs.get("o2");
+}
+
+function handleTouch() {
+  if (!hw.touching && !touch.down) return;
+  const finger = hw.touching;
+  if (finger && !touch.down) { touch.down = true; touch.downAt = millis(); touch.longDone = false; }
+  else if (finger && touch.down && !touch.longDone && millis() - touch.downAt > 1500) { touch.longDone = true; calibrateAir(); }
+  else if (!finger && touch.down) {
+    touch.down = false;
+    if (!touch.longDone && millis() - touch.downAt < 600) page ^= 1;
+  }
+}
+
+function serialCommand(c) {
+  if (c === "c") calibrateAir();
+  if (c === "o") calibrateO2();
+  if (c === "r") { calMv = 0; calO2Mv = 0; saveCal(); flash("CAL RESET"); }
+}
+
+function loop() {
+  handleTouch();
+  if (millis() - tSample >= SAMPLE_MS) {
+    tSample = millis();
+    if (adsOk) {
+      const mv = readDiffMv();
+      buf[bufIdx] = mv; bufIdx = (bufIdx + 1) % AVG_N; if (bufCnt < AVG_N) bufCnt++;
+      mvNow = avgMv();
+      o2Now = mvToO2(mvNow);
+      if (BATT_DIVIDER > 0) {
+        if (++bdiv >= 20) {
+          bdiv = 0;
+          const vb = readBattAdcV() * BATT_DIVIDER;
+          battV = battV < 1 ? vb : battV * 0.8 + vb * 0.2;
+        }
+      }
+    }
+  }
+  if (millis() - tDraw >= 250) {
+    tDraw = millis();
+    drawScreen();
+    serialPrint(`mV=${f(mvNow, 3)} O2=${f(o2Now, 2)}% batt=${f(battV, 2)}V stable=${isStable() ? 1 : 0}`);
+  }
+}
+
+/* ---------- Serial monitor ---------- */
+const logEl = document.getElementById("log");
+const MAX_LINES = 300;
+function serialPrint(line, cls) {
+  const atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 8;
+  const div = document.createElement("div");
+  div.textContent = line;
+  if (cls) div.className = cls;
+  logEl.appendChild(div);
+  while (logEl.childElementCount > MAX_LINES) logEl.firstChild.remove();
+  if (atBottom) logEl.scrollTop = logEl.scrollHeight;
+}
+function send(text) {
+  for (const ch of text) {
+    serialPrint("> " + ch, "cmd");
+    serialCommand(ch);
+  }
+}
+document.querySelectorAll("[data-send]").forEach(b => b.addEventListener("click", () => send(b.dataset.send)));
+document.getElementById("tx").addEventListener("submit", e => {
+  e.preventDefault();
+  const inp = document.getElementById("txIn");
+  if (inp.value) send(inp.value.trim());
+  inp.value = "";
+});
+
+/* ---------- Controls ---------- */
+const gasEl = document.getElementById("gas"), gasVal = document.getElementById("gasVal");
+const presets = [...document.querySelectorAll("#presets button")];
+function setGas(v) {
+  hw.gasO2 = v;
+  gasEl.value = v;
+  gasVal.textContent = `${(+v).toFixed(1)} % O₂`;
+  presets.forEach(b => b.setAttribute("aria-pressed", String(Math.abs(+b.dataset.o2 - v) < 0.05)));
+}
+gasEl.addEventListener("input", () => setGas(+gasEl.value));
+presets.forEach(b => b.addEventListener("click", () => setGas(+b.dataset.o2)));
+
+const cellEl = document.getElementById("cell"), cellVal = document.getElementById("cellVal");
+cellEl.addEventListener("input", () => { hw.cellAirMv = +cellEl.value; cellVal.textContent = `${hw.cellAirMv.toFixed(1)} mV`; });
+const battEl = document.getElementById("batt"), battValEl = document.getElementById("battVal");
+battEl.addEventListener("input", () => { hw.battV = +battEl.value; battValEl.textContent = `${hw.battV.toFixed(2)} V`; });
+document.getElementById("adc").addEventListener("change", e => { hw.adcWired = e.target.checked; });
+document.getElementById("reboot").addEventListener("click", () => { serialPrint("--- power cycle ---", "cmd"); setup(); });
+
+/* touch: pointer held on the glass = finger on the CST816 */
+const holdBar = document.getElementById("hold");
+lcd.addEventListener("pointerdown", e => { hw.touching = true; lcd.setPointerCapture(e.pointerId); e.preventDefault(); });
+["pointerup", "pointercancel", "lostpointercapture"].forEach(t => lcd.addEventListener(t, () => { hw.touching = false; }));
+lcd.addEventListener("contextmenu", e => e.preventDefault());
+
+/* ---------- Run ---------- */
+let lastT = performance.now();
+function step() {
+  const now = performance.now();
+  const dt = Math.min(1, (now - lastT) / 1000);
+  lastT = now;
+  const target = hw.cellAirMv * hw.gasO2 / AIR_O2;
+  hw.cellMv += (target - hw.cellMv) * (1 - Math.exp(-dt / CELL_TAU_S));
+  loop();
+  holdBar.style.width = touch.down && !touch.longDone ? `${Math.min(100, (millis() - touch.downAt) / 15)}%` : "0";
+}
+setup();
+setInterval(step, 10);
+</script>

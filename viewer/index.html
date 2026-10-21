@@ -1,5 +1,8 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>O2 Analyzer Assembly</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -25,7 +28,7 @@
   --bg: #12171b; --panel: #192026; --stage: #0e1316; --fg: #e3e9ed; --muted: #8d9ba5;
   --line: #2a343c; --accent: #3fc1d6; --accent-ink: #062027; --o2: #3fc1d6; color-scheme: dark }
 
-html, body { height: 100%; }
+html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--fg); font-family: var(--body); }
 .app {
   height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0;
@@ -41,6 +44,8 @@ body { background: var(--bg); color: var(--fg); font-family: var(--body); }
   position: absolute; inset: 0; display: grid; place-items: center;
   font: 500 13px var(--mono); color: var(--muted); letter-spacing: .04em;
 }
+.loading[hidden] { display: none; }
+.back { font-size: 13px; color: var(--accent); }
 .side {
   background: var(--panel); border-left: 1px solid var(--line);
   padding-block: 20px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px));
@@ -94,6 +99,7 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
     <div>
       <h1>O<sub>2</sub> Analyzer</h1>
       <p class="sub">ESP32-2424S012 round display, ADS1115, 1S LiPo and an R-22D sensor in a Ø46 mm screw-cap body.</p>
+      <p class="sub"><a class="back" href="../simulator/">Try the display simulator →</a></p>
     </div>
 
     <section>
@@ -196,10 +202,8 @@ PARTS.forEach(p => {
 const loader = new THREE.STLLoader();
 let loaded = 0;
 PARTS.forEach(p => {
-  fetch(`m/${p.id}.txt`).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(b64 => {
-    const bin = atob(b64.trim()), buf = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-    const geo = loader.parse(buf.buffer);
+  fetch(`m/${p.id}.stl`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(buf => {
+    const geo = loader.parse(buf);
     geo.computeVertexNormals();
     const mat = new THREE.MeshStandardMaterial({
       color: p.color, roughness: p.id === "sensor" || p.id === "bezel" ? 0.55 : 0.7,

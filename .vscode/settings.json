@@ -1,0 +1,4 @@
+{
+  "platformio-ide.projectsDir": "${workspaceFolder}/firmware",
+  "files.associations": { "*.ino": "cpp" }
+}

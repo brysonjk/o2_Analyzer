@@ -28,7 +28,7 @@ cap_style = "open";
 show_diverter = true;     // assembly views: show the screw-on diverter on the open cap
 
 use <diverter.scad>
-div_len = 21.4;           // diverter.scad length (its z_top); it seats 0.3 mm short of the cap floor
+div_len = 20.4;           // diverter.scad length (its z_top); it seats 0.3 mm short of the cap floor
 
 /* ---------- MEASURE THESE WITH CALIPERS BEFORE PRINTING ---------- */
 // ESP32-2424S012 (bare board, out of its stock case)

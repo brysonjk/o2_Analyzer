@@ -10,7 +10,7 @@
 //
 //  Export:  openscad -o diverter.stl diverter.scad
 //  Print nose-down (as exported), PETG or TPU 95A, 0.12–0.16 mm layers.
-//  (mount = "thread" only: chase the thread with an M16x1 tap.)
+//  Slip it over the O-ring and thread it on until it stops against the cap.
 // =====================================================================
 
 /* ---- sensor nose (keep in sync with o2_analyzer.scad) ---- */
@@ -22,15 +22,13 @@ exposed_neck = 3.6;       // neck length outside the cap floor (s_neck_h - cap_f
 
 /* ---- diverter ---- */
 // How it attaches to the sensor nose:
-//   "push"   - slides on; the sensor's O-ring grips and seals it. No thread
-//              to print. Stops against the cap. (default)
-//   "thread" - M16x1 internal thread. Printed 1 mm threads are marginal:
-//              run an M16x1 tap through it for a clean fit.
-mount        = "push";
-neck_margin  = 1.0;       // extra room behind the O-ring bore for neck length tolerance
+//   "thread" - screws onto the M16x1 nose (default; prints cleanly as-is)
+//   "push"   - smooth bore; the sensor's O-ring grips and seals it
+mount        = "thread";
+neck_margin  = 0;         // extra room behind the O-ring bore (pushes the thread deeper)
 od           = 26.0;
-th_clear     = 0.30;      // radial (thread mount); set 0 and tap for the best fit
-th_depth     = 0.55;
+th_clear     = 0.20;      // radial
+th_depth     = 0.60;
 oring_bore   = s_oring_d - 0.5;   // radial squeeze ≈ 0.25 mm on the O-ring
 chamber_d    = 15.0;
 chamber_h    = 2.6;       // gas space in front of the sensor face
@@ -94,16 +92,13 @@ module diverter() {
             // female M16x1 (helical groove = thread_solid with the male major dia + clearance)
             translate([0, 0, z_th0])
                 thread_solid(s_thread_d/2 - th_depth + th_clear, th_depth, z_th1 - z_th0, s_thread_p);
-            // 45° lead-in so the sensor tip finds the thread
-            translate([0, 0, z_th1 - 1.2])
-                cylinder(d1 = s_thread_d - 2*th_depth + 2*th_clear, d2 = s_thread_d + 1.8, h = 1.2 + eps);
         } else {
             // smooth clearance bore around the sensor thread
             translate([0, 0, z_th0 - eps]) cylinder(d = s_thread_d + 0.8, h = z_th1 - z_th0 + 2*eps);
             translate([0, 0, z_th1 - 1.2]) cylinder(d1 = s_thread_d + 0.8, d2 = s_thread_d + 1.8, h = 1.2 + eps);
         }
         // neck clearance (absorbs neck-length tolerance), then the O-ring sealing bore + lead-in
-        translate([0, 0, z_th1 - eps]) cylinder(d = s_thread_d + 1.8, h = neck_margin + 2 * eps);
+        if (neck_margin > 0) translate([0, 0, z_th1 - eps]) cylinder(d = s_thread_d + 1.8, h = neck_margin + 2 * eps);
         translate([0, 0, z_th1 + neck_margin - eps]) cylinder(d = oring_bore, h = z_top - z_th1 - neck_margin + 2 * eps);
         translate([0, 0, z_top - 1.0]) cylinder(d1 = oring_bore, d2 = oring_bore + 2.0, h = 1.0 + eps);
         // radial side vents from the chamber (exit just behind the cone, outside the valve)

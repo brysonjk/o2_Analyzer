@@ -5,7 +5,7 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 **Choose your cap.** Both use the same body, bezel, snap hooks and thread:
 | Cap | Length | Best for |
 |---|---|---|
-| `stl/cap_open.stl` | 60.5 mm + 11.9 mm sensor nose; 82.2 mm with `stl/diverter.stl` fitted | Using the screw-on diverter, or any standard M16×1 T-piece or inflator adapter. Bare-sensor air calibration responds in seconds. |
+| `stl/cap_open.stl` | 60.5 mm + 11.9 mm sensor nose; 81.2 mm with `stl/diverter.stl` screwed on | Using the screw-on diverter, or any standard M16×1 T-piece or inflator adapter. Bare-sensor air calibration responds in seconds. |
 | `stl/cap_diverter.stl` | 80.0 mm, diverter built in | The shortest unit with nothing extra to carry or lose. The sensor nose is sealed inside the cap. |
 
 ```
@@ -30,8 +30,8 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 | `stl/body.stl` | Main body. Print upright (spigot down), no supports. |
 | `stl/cap_open.stl` | Open cap: the sensor nose and O-ring stick out. Print open-end up, no supports. |
 | `stl/cap_diverter.stl` | Cap with the diverter built in. Print nose-down, as exported, no supports. |
-| `diverter.scad` → `stl/diverter.stl` | Push-on diverter for the open cap. Print nose-down, no supports. |
-| `stl/diverter_threaded.stl` | The same diverter with an M16×1 thread (`mount = "thread"`). Run an M16×1 tap through it before use. |
+| `diverter.scad` → `stl/diverter.stl` | Screw-on diverter for the open cap. Print nose-down, no supports. |
+| `stl/diverter_push.stl` | Optional thread-free version that the sensor's O-ring holds on. |
 | `stl/bezel.stl` | Twist-lock display bezel. Already flipped face-down for printing. |
 | `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (O-ring bore and upper-body bore), flange ring, and a 4 mm thread pair. |
 | `step/*.step` | The same parts as STEP solids for Fusion 360 or SolidWorks (see CAD files below). |
@@ -127,11 +127,7 @@ The pin map at the top of the sketch is the commonly published one for this boar
 ## Diverter: analyzing a cylinder
 The diverter is either the screw-on part on the open cap, or the bottom of `cap_diverter.stl`. Both work the same way.
 
-**Separate diverter (open cap):** push it straight onto the sensor nose until it stops against the cap. Its counterbore slides over the sensor's O-ring, which both seals it and holds it on. Pull it straight off to remove it. While you're measuring, you're pressing it toward the analyzer, so it can't work loose.
-
-- If it's too loose, it falls off or leaks. Shrink `oring_bore` by 0.1–0.2 mm in `diverter.scad`. If it's too tight, enlarge it by the same amount.
-- `stl/diverter_threaded.stl` screws onto the M16×1 thread instead. Printed 1 mm pitch threads are rarely clean, so run an M16×1 tap through it first. Then it threads on and stops against the cap.
-- Both versions leave 1 mm of extra room behind the O-ring (`neck_margin`), so they still seat if your sensor's neck is a little longer than the drawing suggests.
+**Separate diverter (open cap):** slip it over the sensor's O-ring and thread it onto the M16×1 nose until it stops against the cap. Its counterbore seals on the O-ring. `stl/diverter_push.stl` (`mount = "push"`) is an optional thread-free version that the O-ring alone holds on.
 
 Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small chamber over the sensor face, and exits through 6 side vents. The vents have 11–14× the inlet's area, so the sensor stays at roughly ambient pressure and the reading isn't pushed high. The vents sit just behind the cone, so they stay outside the valve.
 

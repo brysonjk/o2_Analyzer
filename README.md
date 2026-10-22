@@ -1,6 +1,12 @@
 # Compact O2 Analyzer — ESP32-2424S012 + ADS1115 + R-22D
 
-A Ø46 × 80 mm handheld analyzer, with the flow diverter for cylinder checks built in. It's **3 printed parts and no screws**. The round display sits on top. The cap unscrews in under one turn to give access to both the sensor and the battery.
+A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The round display sits on top. The cap unscrews in under one turn to give access to both the sensor and the battery.
+
+**Choose your cap.** Both use the same body, bezel, snap hooks and thread:
+| Cap | Length | Best for |
+|---|---|---|
+| `stl/cap_open.stl` | 60.5 mm + 11.9 mm sensor nose; 81.2 mm with `stl/diverter.stl` screwed on | Using the screw-on diverter, or any standard M16×1 T-piece or inflator adapter. Bare-sensor air calibration responds in seconds. |
+| `stl/cap_diverter.stl` | 80.0 mm, diverter built in | The shortest unit with nothing extra to carry or lose. The sensor nose is sealed inside the cap. |
 
 ```
    ┌──────── BEZEL ────────┐   snaps over the rim, holds the display glass
@@ -12,9 +18,9 @@ A Ø46 × 80 mm handheld analyzer, with the flow diverter for cylinder checks bu
    ┌──────── CAP ──────────┐   < 1 turn off → battery + sensor accessible
    │   Molex headroom       │
    │   R-22D sensor         │   clicks into 3 snap hooks
-   │   O-ring seal          │
-   │   gas chamber + vents  │   built-in diverter
-   └── DIN cone / yoke face ┘   Ø1.6 mm restrictor inlet
+   └──┬── M16×1 nose ───┬───┘   open cap: nose + O-ring exposed
+      │  DIVERTER       │       screw-on (optional), or built into
+      └ DIN cone / yoke ┘       cap_diverter.stl
 ```
 
 ## Files
@@ -22,7 +28,9 @@ A Ø46 × 80 mm handheld analyzer, with the flow diverter for cylinder checks bu
 |---|---|
 | `o2_analyzer.scad` | Fully parametric model (OpenSCAD). Every dimension is at the top. |
 | `stl/body.stl` | Main body. Print upright (spigot down), no supports. |
-| `stl/cap.stl` | Cap with the sensor seat and built-in diverter. Print nose-down, as exported, no supports. |
+| `stl/cap_open.stl` | Open cap: the sensor nose and O-ring stick out. Print open-end up, no supports. |
+| `stl/cap_diverter.stl` | Cap with the diverter built in. Print nose-down, as exported, no supports. |
+| `diverter.scad` → `stl/diverter.stl` | Screw-on diverter for the open cap. Print nose-down, no supports, then run an M16×1 tap through it. |
 | `stl/bezel.stl` | Snap-on display bezel. Already flipped face-down for printing. |
 | `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (O-ring bore and upper-body bore), flange ring, and a 4 mm thread pair. |
 | `firmware/O2_Analyzer/O2_Analyzer.ino` | Arduino sketch. |
@@ -36,7 +44,7 @@ The sensor profile comes from the AII PSR-11-39-MD drawing: 40.4 mm overall and 
 - `batt_*` — the battery size. The default is a 602030 (6×20×30 mm, ≈300 mAh). The pocket must fit inside `spigot_id` (37 mm), which allows a diagonal of up to ~36.5 mm.
 - `ads_zone` — 3.8 mm for the ADS1115 with its wires soldered flat. Raise it if your wiring stands taller.
 
-Export a part with: `openscad -D 'PART="body"' -o body.stl o2_analyzer.scad` (also `cap`, `bezel`, `fit_test`, `assembly`, `exploded`, `section`).
+Export a part with: `openscad -D 'PART="body"' -o body.stl o2_analyzer.scad` (also `cap`, `bezel`, `fit_test`, `assembly`, `exploded`, `section`). Choose the cap version with `cap_style`: `openscad -D 'cap_style="diverter"' -D 'PART="cap"' -o cap_diverter.stl o2_analyzer.scad`. The default is `"open"`.
 
 Print in PETG or ASA with 0.2 mm layers and 4 perimeters, because the threads and snap features need them. The body/cap thread is 4-start: 2 mm between ridges, 8 mm advance per turn, and 0.3 mm clearance. If yours binds, raise `th_clear` to 0.35–0.4.
 
@@ -81,7 +89,9 @@ The board's on/off button drives its IP5306 power chip. Press once to turn on; d
 2. Plug the JST-SH pigtail and the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The power button lines up with the flexible tab in the wall.
 3. Press the bezel straight down until it clicks over the rim. To remove it, put a fingernail in the pry notch.
 4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
-5. Plug the Molex into the back of the sensor. Push the sensor nose-first into the cap until the flange clicks under the three hooks. Its O-ring seals in the bore below, so gas from the diverter can't reach the electronics.
+5. Plug the Molex into the back of the sensor. Push the sensor nose-first into the cap until the flange clicks under the three hooks.
+   - **Open cap:** the nose and O-ring come out through the floor hole.
+   - **Built-in cap:** the O-ring seals in the bore below the sensor, so gas from the diverter can't reach the electronics.
 6. Screw the cap on. It takes a little under one turn.
 
 To change the sensor, unscrew the cap and pull the sensor straight up by its rear boss. The 45° hooks let go with a firm pull.
@@ -108,15 +118,19 @@ Calibration is saved in flash. Recalibrate before each use, as you would with an
 
 The pin map at the top of the sketch is the commonly published one for this board. If the screen stays dark, check `PIN_TFT_*` first.
 
-## Built-in diverter: analyzing a cylinder
-The bottom of the cap is the flow diverter. Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small chamber over the sensor face, and exits through 6 side vents. The vents have about 11× the inlet's area, so the sensor stays at roughly ambient pressure and the reading isn't pushed high. The vents sit just behind the cone, so they stay outside the valve.
+## Diverter: analyzing a cylinder
+The diverter is either the screw-on part on the open cap, or the bottom of `cap_diverter.stl`. Both work the same way.
+
+**Screw-on diverter:** it threads onto the sensor's M16×1 nose until it stops against the cap, and its counterbore seals on the sensor's O-ring. Printed 1 mm pitch threads are rarely clean, so run an M16×1 tap through it, or set `th_clear = 0` in `diverter.scad` and tap it.
+
+Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small chamber over the sensor face, and exits through 6 side vents. The vents have 11–14× the inlet's area, so the sensor stays at roughly ambient pressure and the reading isn't pushed high. The vents sit just behind the cone, so they stay outside the valve.
 
 **Fit:**
 - **Yoke (A-clamp) valve:** press the flat Ø18 mm face onto the valve's outlet O-ring.
 - **DIN valve:** the cone seats in the mouth of the DIN socket.
 
 **Steps:**
-1. Calibrate in air first. Air reaches the sensor through the vents by diffusion, so give it about a minute to settle, or blow a gentle breath of room air through the inlet to speed it up. Wait for STABLE, then long-press to calibrate.
+1. Calibrate in air first. With the diverter on, air reaches the sensor through the vents by diffusion, so give it about a minute to settle. With the open cap you can also calibrate with the diverter off, which responds in seconds. Wait for STABLE, then long-press to calibrate.
 2. Hold the analyzer firmly against the valve outlet, then crack the valve **just** enough to hear a gentle hiss. You want roughly 1–2 L/min; the sensor is rated for 0.5–2 SCFH. Don't open it further.
 3. Wait for STABLE (about 10–20 s), then read the value.
 4. Close the valve **before** pulling the analyzer away.
@@ -124,7 +138,7 @@ The bottom of the cap is the flow diverter. Gas enters through a Ø1.6 mm restri
 
 A higher flow doesn't give a more accurate reading. It builds pressure at the sensor face and reads high. If the reading creeps up as you open the valve more, you're over-flowing.
 
-If the flow is hard to control on your valves, change the inlet with `inlet_d`. Use about 1.2 for a gentler flow, or 2.0 if the reading responds too slowly.
+If the flow is hard to control on your valves, change the inlet with `inlet_d` (in `diverter.scad` or `o2_analyzer.scad`). Use about 1.2 for a gentler flow, or 2.0 if the reading responds too slowly.
 
 ## Opening in VS Code
 1. Clone this repo (VS Code: **Git: Clone**), or unzip the project somewhere permanent.

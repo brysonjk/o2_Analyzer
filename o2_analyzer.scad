@@ -28,7 +28,7 @@ cap_style = "open";
 show_diverter = true;     // assembly views: show the screw-on diverter on the open cap
 
 use <diverter.scad>
-div_len = 20.4;           // diverter.scad length (its z_top); it seats 0.3 mm short of the cap floor
+div_len = 15.39;          // diverter.scad length (its z_top); its rear face seats on the sensor shoulder
 
 /* ---------- MEASURE THESE WITH CALIPERS BEFORE PRINTING ---------- */
 // ESP32-2424S012 (bare board, out of its stock case)
@@ -48,25 +48,28 @@ btn_angle      = 0;      // IP5306 on/off button (side-actuated)
 btn_z_off      = 1.6;    // button centre below PCB bottom face
 btn_reach      = 19.8;   // radius the flexure nub reaches in to (button cap ≈ 0.3 beyond)
 
-// R-22D type sensor — from the AII PSR-11-39-MD drawing
-// (overall 1.590" = 40.4 mm, flange Ø1.154" = 29.3 mm; other steps scaled
-//  from the drawing, so caliper-check the ones marked *)
-s_flange_d     = 29.3;   // widest flange (dimensioned)
-s_flange_h     = 6.8;    // *
-s_body_d       = 25.6;   // * upper body, between flange and O-ring neck
-s_body_h       = 13.1;   // *
-s_taper_h      = 3.1;    // * chamfer from flange down to the rear boss
-s_boss_d       = 14.7;   // * rear boss, Molex recessed inside it
-s_boss_h       = 3.9;    // *
-s_oring_d      = 19.9;   // * O-ring OD on the neck
-s_neck_h       = 5.2;    // * shoulder -> start of thread
+// R-22D type sensor (PSR-11-39-MD) — measured with calipers on a real sensor
+s_total_h      = 40.5;   // thread tip -> rear face
+s_nose_h       = 6.59;   // threaded section: shoulder -> tip (O-ring sits at its base)
+s_body_d       = 26.0;   // body between the shoulder and the flange
+s_body_h       = 15.75;  // shoulder -> underside of the flange
+s_flange_d     = 28.3;   // widest flange
+s_flange_h     = 8.5;
+s_taper_h      = 3.1;    // * (not measured) chamfer from the flange to the rear boss
+s_boss_d       = 14.7;   // * (not measured) rear boss, Molex recessed inside it
+s_oring_d      = 17.7;   // O-ring outside diameter
+s_oring_cs     = 1.7;    // O-ring thickness
 s_thread_d     = 16.0;   // M16 x 1
-s_thread_h     = 8.3;    // * (makes the 40.4 overall)
 plug_clear     = 11.0;   // space behind the boss face for the mating Molex plug + wire bend
-sensor_extra   = 0.5;    // extra radial room around the sensor (paper label, print tolerance)
+body_clear     = 0.5;    // radial room around the body (paper label, print tolerance)
+flange_clear   = 0.8;    // radial room around the flange (hooks need it to flex)
 
-sensor_h       = s_body_h + s_flange_h + s_taper_h + s_boss_h;   // shoulder -> rear face (26.9)
-nose_len       = s_neck_h + s_thread_h;                          // shoulder -> sensor face (13.5)
+s_boss_h       = s_total_h - s_nose_h - s_body_h - s_flange_h - s_taper_h;   // rest of the length
+sensor_h       = s_body_h + s_flange_h + s_taper_h + s_boss_h;   // shoulder -> rear face (33.9)
+nose_len       = s_nose_h;                                       // shoulder -> sensor face
+oring_zone     = s_oring_cs + 0.3;                               // O-ring band below the shoulder
+s_bore_body    = s_body_d + 2*body_clear;
+s_bore_flange  = s_flange_d + 2*flange_clear;
 
 // LiPo (default 602030: 6 x 20 x 30 mm, ~300 mAh)
 batt_t         = 6.0;
@@ -147,8 +150,9 @@ rim_od    = od - 2*rim_wall - 2*fit;
 /* ---------- Derived heights: CAP (z = 0 at the nose face) ---------- */
 z_ch0     = nose_face_h + cone_h;          // chamber floor
 z_sface   = z_ch0 + chamber_h;             // sensor face (nominal)
-cap_floor = 1.6;                           // open style: floor under the sensor shoulder
-z_sh      = cap_style == "diverter" ? z_sface + nose_len : cap_floor;   // sensor shoulder seat
+// open style: the sensor sits on its flange, with the shoulder flush with the
+// cap's bottom face, so the whole threaded nose and the O-ring are exposed
+z_sh      = cap_style == "diverter" ? z_sface + nose_len : 0;   // sensor shoulder plane
 z_flange0 = z_sh + s_body_h;
 z_flange1 = z_flange0 + s_flange_h;        // flange top edge (hooks catch here)
 cav_above = max(1.0, plug_clear - th_len); // the spigot bore is free space too
@@ -157,7 +161,7 @@ z_cap_in_body = th_len - cap_h;            // cap origin in body coordinates
 
 echo(str("Body height: ", body_h, "   Cap height: ", cap_h));
 echo(str("Cap style: ", cap_style, "   overall length: ", body_h + bezel_plate + cap_h - th_len,
-         cap_style == "diverter" ? " (diverter built in)" : str(" + ", nose_len - cap_floor, " sensor nose")));
+         cap_style == "diverter" ? " (diverter built in)" : str(" + ", nose_len, " sensor nose")));
 echo(str("Inlet area ", PI*inlet_d*inlet_d/4, " mm²   vent area ", vent_n*PI*vent_d*vent_d/4, " mm²"));
 
 /* =====================================================================
@@ -367,13 +371,13 @@ module bezel() {
 /* =============================== CAP ================================= */
 module cap() {
     tot = cap_h;
-    r_fb = s_flange_d/2 + fit + sensor_extra;   // flange bore radius
+    r_fb = s_bore_flange/2;                 // flange bore radius
     difference() {
         if (cap_style == "diverter") cap_shell_diverter(tot); else cap_shell_open(tot);
         // ---- sensor seat (both styles) ----
         // upper body bore (locates the sensor), then flange bore
-        translate([0, 0, z_sh]) cylinder(d = s_body_d + 2*(fit + sensor_extra), h = s_body_h + eps);
-        translate([0, 0, z_flange0 - 0.6]) cylinder(d1 = s_body_d + 2*(fit + sensor_extra), d2 = 2*r_fb, h = 0.6 + eps);
+        // body bore; the flat step up to the flange bore is the seat for the flange
+        translate([0, 0, z_sh - eps]) cylinder(d = s_bore_body, h = s_body_h + 2*eps);
         translate([0, 0, z_flange0]) cylinder(d = 2*r_fb, h = sensor_h - s_body_h + eps);
         // Molex plug headroom
         translate([0, 0, z_sh + sensor_h - eps]) cylinder(d = th_major - 2*th_depth + 2*th_clear - 0.2, h = cav_above + 2*eps);
@@ -399,11 +403,11 @@ module cap() {
     for (i = [0 : hook_n - 1]) rotate([0, 0, i * 360 / hook_n]) sensor_hook(r_fb);
 }
 
-// open style: plain cylinder, sensor nose + O-ring pass through the floor
+// open style: plain cylinder, open at the bottom; the flange sits on the
+// step between the body bore and the flange bore
 module cap_shell_open(tot) {
     difference() {
         cylinder(d = od, h = tot);
-        translate([0, 0, -eps]) cylinder(d = s_oring_d + 1.0, h = cap_floor + 2*eps);
         translate([0, 0, -eps]) difference() {
             cylinder(d = od + 1, h = 0.8);
             cylinder(d1 = od - 1.6, d2 = od, h = 0.8 + eps);
@@ -437,10 +441,10 @@ module cap_shell_diverter(tot) {
             translate([chamber_d/2 - 1.5, 0, z_ch0 + chamber_h/2]) teardrop_x(vent_d, nose_od);
 
         // clearance for the M16 nose (sensor face sits 1.2 above the chamber ledge)
-        translate([0, 0, z_ch0 + 0.8]) cylinder(d = s_thread_d + 1.4, h = z_sh - z_ch0 - 0.8 + eps);
+        translate([0, 0, z_ch0 + 0.8]) cylinder(d = s_thread_d + 0.8, h = z_sh - z_ch0 - 0.8 + eps);
         // O-ring sealing bore (seals the chamber off from the electronics)
-        translate([0, 0, z_sh - 4.6]) cylinder(d = oring_bore, h = 4.6 + eps);
-        translate([0, 0, z_sh - 0.6]) cylinder(d1 = oring_bore, d2 = oring_bore + 1.2, h = 0.6 + eps);
+        translate([0, 0, z_sh - oring_zone]) cylinder(d = oring_bore, h = oring_zone + eps);
+        translate([0, 0, z_sh - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
     }
 }
 
@@ -471,19 +475,18 @@ module teardrop_x(d, len) {
 // flange ring, and 4 mm of the mating thread.  ~20 min of printing.
 module fit_test() {
     difference() { cylinder(d = disp_bore + 3, h = 2); translate([0,0,-eps]) cylinder(d = disp_bore, h = 3); }
+    // sensor seat: body bore with the flange step on top (open cap seats here)
     translate([52, 0, 0]) difference() {
-        cylinder(d = s_body_d + 2*(fit + sensor_extra) + 4, h = 7.6);
-        translate([0, 0, -eps]) cylinder(d = s_thread_d + 1.4, h = 10);
-        translate([0, 0, 3 - eps]) cylinder(d = oring_bore, h = 4.6 + eps);
-        translate([0, 0, 7.6 - 0.6]) cylinder(d1 = oring_bore, d2 = oring_bore + 1.2, h = 0.6 + eps);
+        cylinder(d = s_bore_flange + 4, h = 6);
+        translate([0, 0, -eps]) cylinder(d = s_bore_body, h = 3 + 2*eps);
+        translate([0, 0, 3]) cylinder(d = s_bore_flange, h = 4);
     }
-    translate([52, 0, 7.6 - eps]) difference() {
-        cylinder(d = s_body_d + 2*(fit + sensor_extra) + 4, h = 2);
-        translate([0, 0, -eps]) cylinder(d = s_body_d + 2*(fit + sensor_extra), h = 3);
-    }
+    // O-ring sealing bore (built-in-diverter cap)
     translate([90, 0, 0]) difference() {
-        cylinder(d = s_flange_d + 2*(fit + sensor_extra) + 3, h = 3);
-        translate([0, 0, -eps]) cylinder(d = s_flange_d + 2*(fit + sensor_extra), h = 4);
+        cylinder(d = oring_bore + 5, h = oring_zone + 1);
+        translate([0, 0, -eps]) cylinder(d = s_thread_d + 0.8, h = 2);
+        translate([0, 0, 1]) cylinder(d = oring_bore, h = oring_zone + eps);
+        translate([0, 0, oring_zone + 0.7]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
     }
     translate([0, 54, 0]) intersection() { body(); cylinder(d = od + 1, h = 4); }
     translate([54, 54, 0]) difference() {
@@ -499,10 +502,9 @@ module dummy_sensor() {   // z = 0 at the shoulder
         translate([0, 0, s_body_h]) cylinder(d = s_flange_d, h = s_flange_h);
         translate([0, 0, s_body_h + s_flange_h]) cylinder(d1 = s_flange_d, d2 = s_boss_d, h = s_taper_h);
         translate([0, 0, sensor_h - s_boss_h - eps]) cylinder(d = s_boss_d, h = s_boss_h);
-        translate([0, 0, -s_neck_h]) cylinder(d = 17.3, h = s_neck_h);
-        translate([0, 0, -s_thread_h - s_neck_h]) cylinder(d = s_thread_d, h = s_thread_h);
+        translate([0, 0, -s_nose_h]) cylinder(d = s_thread_d, h = s_nose_h + eps);
     }
-    color("black") translate([0, 0, -3]) rotate_extrude() translate([8.65 + 0.6, 0]) circle(d = 1.6, $fn = 16);
+    color("black") translate([0, 0, -s_oring_cs/2]) rotate_extrude() translate([(s_oring_d - s_oring_cs)/2, 0]) circle(d = s_oring_cs, $fn = 16);
     color("white") translate([-4, -2.5, sensor_h]) cube([8, 5, 6]);       // mating plug
     color("red") for (x = [-2.5, 0, 2.5]) translate([x, 0, sensor_h + 6]) cylinder(d = 1.2, h = 3, $fn = 8);
 }
@@ -524,7 +526,7 @@ module assembly(explode = 0) {
         color("#e0e0e0") cap();
         translate([0, 0, z_sh + explode * 1.2]) dummy_sensor();
         if (cap_style == "open" && show_diverter)
-            color("#1f9e8f") translate([0, 0, -0.3 - div_len - explode * 1.4]) diverter();
+            color("#1f9e8f") translate([0, 0, -div_len - explode * 1.4]) diverter();
     }
 }
 

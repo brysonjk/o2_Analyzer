@@ -5,8 +5,8 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 **Choose your cap.** Both use the same body, bezel, snap hooks and thread:
 | Cap | Length | Best for |
 |---|---|---|
-| `stl/cap_open.stl` | 60.5 mm + 11.9 mm sensor nose; 81.2 mm with `stl/diverter.stl` screwed on | Using the screw-on diverter, or any standard M16×1 T-piece or inflator adapter. Bare-sensor air calibration responds in seconds. |
-| `stl/cap_diverter.stl` | 80.0 mm, diverter built in | The shortest unit with nothing extra to carry or lose. The sensor nose is sealed inside the cap. |
+| `stl/cap_open.stl` | 65.9 mm + 6.6 mm sensor nose; 81.3 mm with `stl/diverter.stl` screwed on | Using the screw-on diverter, or any standard M16×1 T-piece or inflator adapter. Bare-sensor air calibration responds in seconds. |
+| `stl/cap_diverter.stl` | 80.1 mm, diverter built in | The shortest unit with nothing extra to carry or lose. The sensor nose is sealed inside the cap. |
 
 ```
    ┌──────── BEZEL ────────┐   twist-lock, holds the display glass
@@ -38,8 +38,13 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 | `firmware/O2_Analyzer/O2_Analyzer.ino` | Arduino sketch. |
 
 ## ⚠️ Measure before you print
-The sensor profile comes from the AII PSR-11-39-MD drawing: 40.4 mm overall and a Ø29.3 mm flange. The intermediate steps were scaled from that drawing, so check the values marked `*` in the SCAD header with calipers, then re-export:
-- `s_body_d`, `s_body_h`, `s_flange_h`, `s_boss_d`, `s_oring_d`, `s_neck_h`, `s_thread_h` — the stepped sensor profile. `s_body_h` and `s_flange_h` decide where the snap hooks catch, so they matter most.
+The sensor profile is measured from a real PSR-11-39-MD:
+- 40.5 mm overall.
+- A 6.59 mm threaded nose, with the 17.7 × 1.7 mm O-ring at its base.
+- A Ø26 × 15.75 mm body.
+- A Ø28.3 × 8.5 mm flange.
+
+Other R-22D-type sensors may differ slightly, so check them against yours. Only the rear taper and boss (marked `*`) are still estimates. `s_body_h` and `s_flange_h` decide where the snap hooks catch and where the open cap's flange seat is, so they matter most. If you change the nose values, change them in `diverter.scad` too.
 - `plug_clear` — the space behind the sensor for the Molex plug and its wire bend (11 mm).
 - `glass_d`, `glass_stack`, `comp_h` — display glass diameter, glass-to-PCB height, and the tallest component under the PCB.
 - `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach` — where the USB-C port and the on/off button sit, and how far in the button nub reaches.
@@ -57,7 +62,7 @@ The body prints spigot-down, so its thread starts on the build plate. Turn on yo
 |---|---|---|---|
 | Battery latches | `latch_hook` (1.0) | 0.8 | 1.2 |
 | Body/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
-| Sensor fit in the cap | `sensor_extra` (0.5) | 0.7 | 0.3 |
+| Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.8) | +0.2 | −0.2 |
 | Sensor snap hooks | `hook_overlap` (0.75) / `hook_preload` (0.4) | `hook_overlap` 0.6 | `hook_preload` 0.6 |
 | Bezel twist-lock | `bay_lock` (0.05) | 0 | 0.10 |
 | Power button | `btn_reach` (19.8) | — | lower it, e.g. 19.5, if a press doesn't click the switch |
@@ -96,8 +101,8 @@ The board's on/off button drives its IP5306 power chip. Press once to turn on; d
 3. Fit the bezel: line up the three small notches on its lower edge with the three slots in the rim, press it down flat, then turn it clockwise about 30° until it stops. To remove it, turn it counter-clockwise and lift it off. Nothing has to flex, so it won't crack.
 4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
 5. Plug the Molex into the back of the sensor. Push the sensor nose-first into the cap until the flange clicks under the three hooks.
-   - **Open cap:** the nose and O-ring come out through the floor hole.
-   - **Built-in cap:** the O-ring seals in the bore below the sensor, so gas from the diverter can't reach the electronics.
+   - **Open cap:** the sensor rests on its flange, with the shoulder flush with the cap's bottom face. The whole threaded nose and the O-ring stick out.
+   - **Built-in cap:** the sensor rests on its shoulder, and the O-ring seals in the bore just below, so gas from the diverter can't reach the electronics.
 6. Screw the cap on. It takes a little under one turn.
 
 To change the sensor, unscrew the cap and pull the sensor straight up by its rear boss. The 45° hooks let go with a firm pull.
@@ -127,7 +132,7 @@ The pin map at the top of the sketch is the commonly published one for this boar
 ## Diverter: analyzing a cylinder
 The diverter is either the screw-on part on the open cap, or the bottom of `cap_diverter.stl`. Both work the same way.
 
-**Separate diverter (open cap):** slip it over the sensor's O-ring and thread it onto the M16×1 nose until it stops against the cap. Its counterbore seals on the O-ring. `stl/diverter_push.stl` (`mount = "push"`) is an optional thread-free version that the O-ring alone holds on.
+**Separate diverter (open cap):** slip it over the sensor's O-ring and thread it onto the M16×1 nose until its rear face stops against the sensor's shoulder. That's about 5 turns. Its counterbore seals on the O-ring. `stl/diverter_push.stl` (`mount = "push"`) is an optional thread-free version that the O-ring alone holds on.
 
 Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small chamber over the sensor face, and exits through 6 side vents. The vents have 11–14× the inlet's area, so the sensor stays at roughly ambient pressure and the reading isn't pushed high. The vents sit just behind the cone, so they stay outside the valve.
 

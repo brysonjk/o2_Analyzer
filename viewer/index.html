@@ -139,8 +139,8 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
       <p class="label">Envelope</p>
       <dl class="dims">
         <dt>Diameter</dt><dd>46.0 mm</dd>
-        <dt>Length</dt><dd id="dLen">60.5 mm + 11.9 mm sensor nose</dd>
-        <dt>With diverter</dt><dd id="dDiv">81.2 mm</dd>
+        <dt>Length</dt><dd id="dLen">65.9 mm + 6.6 mm sensor nose</dd>
+        <dt>With diverter</dt><dd id="dDiv">81.3 mm</dd>
         <dt>Cap thread</dt><dd>M42.4, 4-start, 8 mm/turn</dd>
         <dt>Printed parts</dt><dd id="dParts">3 + optional diverter, no screws</dd>
       </dl>
@@ -161,9 +161,9 @@ const PARTS = [
   { id: "body",     name: "Body",              color: 0x3f6fa0, dz:   0, print: true },
   { id: "battery",  name: "LiPo 602030",       color: 0xc9cdd2, dz: -14, ref: true },
   { id: "sensor",   name: "R-22D sensor",      color: 0x23272b, dz: -34, ref: true },
-  { id: "cap_open",     name: "Cap (open)",            color: 0xd8dde1, dz: -64,  print: true, cap: "open" },
-  { id: "diverter",     name: "Screw-on diverter",     color: 0x1f9e8f, dz: -104, print: true, cap: "open" },
-  { id: "cap_diverter", name: "Cap (built-in diverter)", color: 0xd8dde1, dz: -84, print: true, cap: "built" },
+  { id: "cap_open",     name: "Cap (open)",            color: 0xd8dde1, dz: -80,  print: true, cap: "open" },
+  { id: "diverter",     name: "Screw-on diverter",     color: 0x1f9e8f, dz: -115, print: true, cap: "open" },
+  { id: "cap_diverter", name: "Cap (built-in diverter)", color: 0xd8dde1, dz: -100, print: true, cap: "built" },
 ];
 let capMode = "open";
 
@@ -217,8 +217,8 @@ function applyCap() {
   });
   document.getElementById("cOpen").setAttribute("aria-pressed", String(capMode === "open"));
   document.getElementById("cBuilt").setAttribute("aria-pressed", String(capMode === "built"));
-  document.getElementById("dLen").textContent = capMode === "open" ? "60.5 mm + 11.9 mm sensor nose" : "80.0 mm, diverter built in";
-  document.getElementById("dDiv").textContent = capMode === "open" ? "81.2 mm" : "80.0 mm";
+  document.getElementById("dLen").textContent = capMode === "open" ? "65.9 mm + 6.6 mm sensor nose" : "80.1 mm, diverter built in";
+  document.getElementById("dDiv").textContent = capMode === "open" ? "81.3 mm" : "80.1 mm";
   document.getElementById("dParts").textContent = capMode === "open" ? "3 + optional diverter, no screws" : "3, no screws";
 }
 document.getElementById("cOpen").onclick = () => { capMode = "open"; applyCap(); };

@@ -16,9 +16,10 @@
 /* ---- sensor nose (keep in sync with o2_analyzer.scad) ---- */
 s_thread_d   = 16.0;
 s_thread_p   = 1.0;
-s_thread_h   = 8.3;
-s_oring_d    = 19.9;
-exposed_neck = 3.6;       // neck length outside the cap floor (s_neck_h - cap_floor)
+s_nose_h     = 6.59;      // threaded section: shoulder -> tip (measured)
+s_oring_d    = 17.7;      // O-ring OD, sits at the base of the thread (measured)
+s_oring_cs   = 1.7;       // O-ring thickness (measured)
+oring_zone   = s_oring_cs + 0.3;   // O-ring band behind the thread
 
 /* ---- diverter ---- */
 // How it attaches to the sensor nose:
@@ -46,8 +47,8 @@ eps = 0.01;
 // derived (z = 0 at the nose face, increasing toward the analyzer)
 z_ch0   = nose_h + cone_h;                    // chamber floor
 z_th0   = z_ch0 + chamber_h;                  // thread start (sensor face)
-z_th1   = z_th0 + s_thread_h + 0.6;           // thread end
-z_top   = z_th1 + exposed_neck + neck_margin - 0.3;   // rear face (0.3 short of the cap floor)
+z_top   = z_th0 + 0.6 + s_nose_h + neck_margin;  // rear face seats on the sensor shoulder
+z_th1   = z_top - oring_zone - neck_margin;      // thread ends where the O-ring bore begins
 
 echo(str("Diverter length: ", z_top, " mm   inlet area ", PI*inlet_d*inlet_d/4,
          " mm²   vent area ", vent_n*PI*vent_d*vent_d/4, " mm²"));
@@ -100,14 +101,14 @@ module diverter() {
         // neck clearance (absorbs neck-length tolerance), then the O-ring sealing bore + lead-in
         if (neck_margin > 0) translate([0, 0, z_th1 - eps]) cylinder(d = s_thread_d + 1.8, h = neck_margin + 2 * eps);
         translate([0, 0, z_th1 + neck_margin - eps]) cylinder(d = oring_bore, h = z_top - z_th1 - neck_margin + 2 * eps);
-        translate([0, 0, z_top - 1.0]) cylinder(d1 = oring_bore, d2 = oring_bore + 2.0, h = 1.0 + eps);
+        translate([0, 0, z_top - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
         // radial side vents from the chamber (exit just behind the cone, outside the valve)
         for (i = [0 : vent_n - 1]) rotate([0, 0, i * 360 / vent_n + 30])
             translate([0, 0, z_ch0 + chamber_h / 2]) 
                 teardrop_x(vent_d, od);
         // grip flutes
         for (i = [0 : 11]) rotate([0, 0, i * 30 + 15])
-            translate([od / 2 + 0.5, 0, z_th0 + 2.0]) cylinder(d = 2.2, h = z_top, $fn = 16);
+            translate([od / 2 + 0.5, 0, z_th0 + 1.0]) cylinder(d = 2.2, h = z_top, $fn = 16);
     }
 }
 

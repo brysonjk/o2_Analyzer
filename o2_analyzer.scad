@@ -1,22 +1,21 @@
 // =====================================================================
 //  Compact O2 Analyzer  —  ESP32-2424S012 + ADS1115 + R-22D sensor
-//  Parametric OpenSCAD enclosure.  All units mm.
+//  Parametric OpenSCAD enclosure, 3 printed parts, no screws.  Units: mm.
 //
-//  Layout (top to bottom), one Ø46 cylinder:
-//    BEZEL  : snaps/screws over the round display
-//    BODY   : display seat, ADS1115 bay, battery pocket (opens downward),
-//             threaded spigot at the bottom
-//    CAP    : screws onto the body, holds the R-22D sensor face-down with
-//             the M16x1 nose sticking out (fits standard flow diverters)
+//    BEZEL : snaps over the body rim and holds the round display glass
+//    BODY  : display seat, flexure power button, ADS1115 bay, battery
+//            pocket with spring latches, 4-start threaded spigot
+//    CAP   : snap-in sensor seat + built-in flow diverter (restrictor,
+//            gas chamber, side vents, yoke face, DIN cone)
 //
-//  Unscrew the CAP  ->  sensor lifts out, Molex unplugs, and the battery
-//  slides out of its pocket.  Both are user-serviceable from one joint.
+//  Unscrew the CAP (< 1 turn)  ->  pull the battery down out of its
+//  pocket; pull the sensor up out of its snap hooks.
 //
 //  Render one part:  set PART below, or from the CLI:
 //     openscad -D 'PART="body"' -o body.stl o2_analyzer.scad
 // =====================================================================
 
-PART = "assembly";   // assembly | body | cap | bezel | button | fit_test | all_print
+PART = "assembly";   // assembly | exploded | section | body | cap | bezel | fit_test
 
 /* ---------- MEASURE THESE WITH CALIPERS BEFORE PRINTING ---------- */
 // ESP32-2424S012 (bare board, out of its stock case)
@@ -33,8 +32,8 @@ usb_angle      = 270;
 usb_w          = 9.6;
 usb_h          = 3.8;
 btn_angle      = 0;      // IP5306 on/off button (side-actuated)
-btn_d          = 3.2;    // plunger hole
 btn_z_off      = 1.6;    // button centre below PCB bottom face
+btn_reach      = 19.8;   // radius the flexure nub reaches in to (button cap ≈ 0.3 beyond)
 
 // R-22D type sensor — from the AII PSR-11-39-MD drawing
 // (overall 1.590" = 40.4 mm, flange Ø1.154" = 29.3 mm; other steps scaled
@@ -50,24 +49,20 @@ s_oring_d      = 19.9;   // * O-ring OD on the neck
 s_neck_h       = 5.2;    // * shoulder -> start of thread
 s_thread_d     = 16.0;   // M16 x 1
 s_thread_h     = 8.3;    // * (makes the 40.4 overall)
-plug_clear     = 11.0;
-// Retainer collar: clamps the sensor's rear cone so it can't float.
-ret_id         = 24.0;   // inner edge rests on the sensor's rear cone; passes the Molex plug
-ret_preload    = 0.5;    // spring-petal deflection when the cap is fully tightened
-ret_petal_t    = 0.8;   // space behind the boss face for the mating Molex plug + wire bend
+plug_clear     = 11.0;   // space behind the boss face for the mating Molex plug + wire bend
 
 sensor_h       = s_body_h + s_flange_h + s_taper_h + s_boss_h;   // shoulder -> rear face (26.9)
-nose_len       = s_neck_h + s_thread_h;                          // sticks out the front (13.5)
+nose_len       = s_neck_h + s_thread_h;                          // shoulder -> sensor face (13.5)
 
 // LiPo (default 602030: 6 x 20 x 30 mm, ~300 mAh)
 batt_t         = 6.0;
 batt_w         = 20.0;
 batt_l         = 30.0;
 
-// ADS1115 breakout (Adafruit / clone ≈ 28 x 17.8)
+// ADS1115 breakout (Adafruit / clone ≈ 28 x 17.8), no headers, wires flat
 ads_l          = 28.6;
 ads_w          = 18.4;
-ads_zone       = 5.0;    // free height for ADS board + soldered wires
+ads_zone       = 3.8;    // free height for ADS board + soldered wires
 
 /* ---------- Enclosure ---------- */
 od             = 46.0;
@@ -75,45 +70,75 @@ fit            = 0.30;   // general radial clearance
 bezel_plate    = 1.2;
 rim_h          = 3.8;    // body rim engaged inside the bezel skirt
 rim_wall       = 1.2;    // bezel skirt wall
+snap_depth     = 0.45;   // bezel bead / rim groove engagement
 
-// thread between body and cap
-th_pitch       = 2.0;
+// body <-> cap thread: 4-start, so the cap closes in < 1 turn and the
+// sensor wires barely twist
+th_pitch       = 2.0;    // axial spacing between thread ridges
+th_starts      = 4;      // lead = pitch * starts = 8 mm per turn
 th_depth       = 0.9;
 th_len         = 7.0;
 th_major       = 42.4;   // male (body spigot) major diameter
 th_clear       = 0.30;   // radial clearance male/female
 spigot_id      = 37.0;   // must pass the battery diagonal (36.1 for 602030)
 
-cap_floor      = 1.6;
+// built-in diverter (bottom of the cap)
+inlet_d        = 1.6;    // restrictor orifice
+vent_d         = 2.2;
+vent_n         = 6;
+face_d         = 18.0;   // flat face for yoke valves (covers the outlet O-ring)
+cone_d         = 25.0;   // seats in DIN sockets (G5/8, Ø≈20.6–22.9)
+cone_h         = 4.0;
+nose_face_h    = 1.6;
+chamber_d      = 15.0;
+chamber_h      = 2.0;    // gas space in front of the sensor face
+nose_od        = 26.0;
+oring_bore     = s_oring_d - 0.5;   // radial squeeze ≈ 0.25 mm on the sensor O-ring
+
+// sensor snap hooks (in the cap wall)
+hook_n         = 3;
+hook_w         = 5.0;
+hook_t         = 1.4;    // beam thickness (flex direction)
+hook_reach     = 1.05;   // inward reach past the flange bore
+hook_preload   = 0.4;    // how far the 45° hook face sits below the flange edge
 
 $fn = 96;
 eps = 0.01;
 
-/* ---------- Derived heights (body z=0 at spigot end) ---------- */
+/* ---------- Derived heights: BODY (z = 0 at spigot end) ---------- */
 z_batt0   = th_len;                        // battery pocket bottom opening
-batt_zone = batt_t + 1.2;
+batt_zone = batt_t + 0.6;
 z_floor   = z_batt0 + batt_zone;           // floor between battery & ADS
-floor_t   = 1.2;
+floor_t   = 1.0;
 z_cav0    = z_floor + floor_t;             // ADS cavity floor
 z_pcb     = z_cav0 + ads_zone + comp_h;    // PCB bottom face rests here
 z_glass   = z_pcb + pcb_t + glass_stack;   // glass top
 body_h    = z_glass;
 z_rim0    = body_h - rim_h;
+z_snap    = z_rim0 + rim_h * 0.45;         // centre of the snap bead
 
 disp_bore = pcb_d + 2*fit + 0.4;
 cav_bore  = od - 2*2.4;                    // ADS / component cavity
+rim_od    = od - 2*rim_wall - 2*fit;
 
-// the spigot bore (th_len deep) is already free space above the cap cavity
-cav_above = max(1.0, plug_clear - th_len);
-cap_h     = cap_floor + sensor_h + cav_above + th_len;
-echo(str("Retainer height: ", ret_z1 - ret_z0));
-echo(str("Body height: ", body_h, "  Cap height: ", cap_h));
-echo(str("Overall height (excl. nose): ", body_h + bezel_plate + cap_h - th_len,
-         "   nose protrudes: ", nose_len - cap_floor));
+/* ---------- Derived heights: CAP (z = 0 at the nose face) ---------- */
+z_ch0     = nose_face_h + cone_h;          // chamber floor
+z_sface   = z_ch0 + chamber_h;             // sensor face (nominal)
+z_sh      = z_sface + nose_len;            // sensor shoulder seat
+z_flange0 = z_sh + s_body_h;
+z_flange1 = z_flange0 + s_flange_h;        // flange top edge (hooks catch here)
+cav_above = max(1.0, plug_clear - th_len); // the spigot bore is free space too
+cap_h     = z_sh + sensor_h + cav_above + th_len;
+z_cap_in_body = th_len - cap_h;            // cap origin in body coordinates
+
+echo(str("Body height: ", body_h, "   Cap height: ", cap_h));
+echo(str("Overall length incl. built-in diverter: ", body_h + bezel_plate + cap_h - th_len));
+echo(str("Inlet area ", PI*inlet_d*inlet_d/4, " mm²   vent area ", vent_n*PI*vent_d*vent_d/4, " mm²"));
 
 /* =====================================================================
    Helical thread: horizontal cross-section r(θ) extruded with twist.
-   Exact single-start helix; same generator for male and female.
+   Multi-start: the profile repeats `starts` times around, and the
+   extrusion twists once per lead (pitch × starts).
    ===================================================================== */
 function th_prof(t, rmin, d) =             // t in [0,1): trapezoid profile
     let(f = t - floor(t))
@@ -123,16 +148,17 @@ function th_prof(t, rmin, d) =             // t in [0,1): trapezoid profile
     f < 0.88 ? rmin + d * (0.88 - f) / 0.30 :
     rmin;
 
-module thread_section(rmin, d, n = 120) {
+module thread_section(rmin, d, starts, n = 192) {
     polygon([for (i = [0 : n - 1])
-        let(a = 360 * i / n, r = th_prof(a / 360, rmin, d))
+        let(a = 360 * i / n, r = th_prof(starts * a / 360, rmin, d))
         [r * cos(a), r * sin(a)]]);
 }
 
-module thread_solid(rmin, d, len, pitch) {
-    linear_extrude(height = len, twist = -360 * len / pitch,
-                   slices = ceil(len / pitch * 20), convexity = 6)
-        thread_section(rmin, d);
+module thread_solid(rmin, d, len, pitch, starts = 1) {
+    lead = pitch * starts;
+    linear_extrude(height = len, twist = -360 * len / lead,
+                   slices = ceil(len / lead * 72), convexity = 8)
+        thread_section(rmin, d, starts);
 }
 
 /* ============================== BODY ================================= */
@@ -141,10 +167,10 @@ module body() {
         union() {
             // main tube (above spigot), stepped rim at the top for the bezel
             translate([0, 0, th_len]) cylinder(d = od, h = z_rim0 - th_len);
-            translate([0, 0, z_rim0 - eps]) cylinder(d = od - 2*rim_wall - 2*fit, h = rim_h + eps);
-            // threaded spigot (male) with a lead-in chamfer
+            translate([0, 0, z_rim0 - eps]) cylinder(d = rim_od, h = rim_h + eps);
+            // threaded spigot (male, 4-start) with a lead-in chamfer
             intersection() {
-                thread_solid(th_major/2 - th_depth, th_depth, th_len + eps, th_pitch);
+                thread_solid(th_major/2 - th_depth, th_depth, th_len + eps, th_pitch, th_starts);
                 union() {
                     translate([0, 0, -0.05]) cylinder(d1 = th_major - 2*th_depth - 0.6, d2 = th_major + 0.6, h = 1.25);
                     translate([0, 0, 1.2 - eps]) cylinder(d = th_major + 1, h = th_len);
@@ -159,9 +185,7 @@ module body() {
         translate([0, 0, z_batt0 - eps]) {
             translate([-batt_l/2 - 0.4, -batt_w/2 - 0.4, 0])
                 cube([batt_l + 0.8, batt_w + 0.8, batt_zone + eps]);
-            // lead channel along +Y edge (JST-1.25 extension sits here)
             translate([-9, batt_w/2, 0]) cube([18, 6.0, batt_zone + eps]);
-            // finger notch to pull the battery
             translate([0, -batt_w/2 - 0.4, 0]) scale([1, 0.45, 1])
                 cylinder(r = 7, h = batt_zone * 0.6);
         }
@@ -172,13 +196,10 @@ module body() {
 
         // ADS1115 + under-PCB component cavity
         translate([0, 0, z_cav0]) cylinder(d = cav_bore, h = z_pcb - z_cav0 + eps);
-        // ADS pocket in floor (0.8 deep locator)
-        translate([-ads_l/2, -ads_w/2 - 3, z_cav0 - 0.8]) cube([ads_l, ads_w, 1]);
+        translate([-ads_l/2, -ads_w/2 - 3, z_cav0 - 0.6]) cube([ads_l, ads_w, 1]);
 
         // display seat
         translate([0, 0, z_pcb]) cylinder(d = disp_bore, h = body_h);
-        // leave 3 support pads for the PCB: cut cavity between them
-        // (pads are what remains of the ledge between disp_bore and cav_bore)
 
         // USB-C slot (opening flares outward for the plug overmould)
         rotate([0, 0, usb_angle]) translate([od/2 - 3.5, 0, z_pcb - usb_h/2 - 0.2]) {
@@ -188,21 +209,18 @@ module body() {
                 square([usb_h + 3, usb_w + 3.4], center = true);
         }
 
-        // on/off button plunger bore
-        rotate([0, 0, btn_angle]) translate([0, 0, z_pcb - btn_z_off])
-            rotate([0, 90, 0]) {
-                cylinder(d = btn_d + 0.3, h = od);
-                translate([0, 0, cav_bore/2 - 0.5]) cylinder(d = btn_d + 2.6, h = 1.4); // plunger flange recess
-            }
+        // flexure power button: U-slot through the wall + thinned tab
+        rotate([0, 0, btn_angle]) button_cut();
 
-        // two M2 radial screw holes through the rim for the bezel
-        for (a = [45, 225]) rotate([0, 0, a])
-            translate([od/2 - rim_wall - 4, 0, z_rim0 + rim_h/2]) rotate([0, 90, 0])
-                cylinder(d = 1.6, h = 6, $fn = 24);
+        // snap groove around the rim for the bezel bead
+        translate([0, 0, z_snap]) snap_ring(rim_od + 1, rim_od - 2*snap_depth, 1.0);
 
         // top chamfer on rim inner edge (eases display insertion)
         translate([0, 0, body_h - 0.8]) cylinder(d1 = disp_bore, d2 = disp_bore + 1.6, h = 0.8 + eps);
     }
+
+    // flexure button nub
+    rotate([0, 0, btn_angle]) button_nub();
 
     // PCB support pads in the cavity (3 pads, skip USB + button sectors)
     for (a = [usb_angle + 120, usb_angle + 240, usb_angle + 60])
@@ -210,147 +228,207 @@ module body() {
         rotate([0, 0, a]) translate([cav_bore/2 - 2.4, -2, z_cav0])
             cube([2.6, 4, z_pcb - z_cav0]);
 
-    // battery latches: two spring beams inside the spigot, one at each short
-    // end of the battery.  Push the battery up -> it snaps past the hooks;
-    // pull down firmly with the finger notch to remove.
+    // battery latches: two spring beams inside the spigot
     for (m = [0, 1]) mirror([m, 0, 0]) battery_latch();
 }
 
+// ring-shaped groove/bead with 45° flanks, centred on z = 0
+module snap_ring(d_out, d_in, h) {
+    rotate_extrude($fn = 96) polygon([
+        [d_out/2, -h/2 - (d_out - d_in)/2], [d_in/2, -h/2 + 0.0],
+        [d_in/2,  h/2 - 0.0], [d_out/2, h/2 + (d_out - d_in)/2]]);
+}
+
+/* ---- flexure button ---- */
+btn_tab_w   = 6.0;
+btn_tab_z0  = z_pcb - btn_z_off - 5.5;   // hinge (bottom)
+btn_tab_z1  = z_pcb - 0.2;               // free end, kept below the bezel rim
+btn_slot    = 0.6;
+btn_thin    = 0.8;                       // outer recess -> tab is 1.6 thick
+
+module button_cut() {
+    r_in = cav_bore/2;
+    // U-shaped slot: two sides + top, hinge left at the bottom
+    for (s = [-1, 1])
+        translate([r_in - 1, s * (btn_tab_w/2 + btn_slot/2) - btn_slot/2, btn_tab_z0])
+            cube([od/2 - r_in + 2, btn_slot, btn_tab_z1 - btn_tab_z0 + btn_slot]);
+    translate([r_in - 1, -btn_tab_w/2 - btn_slot, btn_tab_z1])
+        cube([od/2 - r_in + 2, btn_tab_w + 2*btn_slot, btn_slot]);
+    // outer recess thins the tab and gives the thumb a locator
+    translate([od/2 - btn_thin, -btn_tab_w/2 - btn_slot, btn_tab_z0 - 1.5])
+        cube([2, btn_tab_w + 2*btn_slot, btn_tab_z1 - btn_tab_z0 + btn_slot + 1.5]);
+}
+
+module button_nub() {
+    r_in = cav_bore/2;
+    zc = z_pcb - btn_z_off;
+    // tapered pin from the tab's inner face to btn_reach, 45° underside
+    hull() {
+        translate([r_in + 0.1, 0, zc]) rotate([0, -90, 0]) cylinder(d = 3.0, h = eps, $fn = 24);
+        translate([btn_reach, 0, zc]) rotate([0, -90, 0]) cylinder(d = 2.0, h = eps, $fn = 24);
+        translate([r_in + 0.1, 0, zc - 1.6]) rotate([0, -90, 0]) cylinder(d = 0.6, h = eps, $fn = 12);
+    }
+}
+
+/* ---- battery latches ---- */
 latch_x    = batt_l/2 + 0.5;   // beam inner face (just behind the pocket wall)
 latch_t    = 1.0;              // beam thickness (flex direction)
 latch_w    = 6.0;
 latch_hook = 1.0;              // how far the hook reaches under the battery edge (0.5 overlap)
-latch_z0   = 0.8;              // clear of the retainer petals below the spigot end
+latch_z0   = 0.8;
 
 module battery_latch() {
     r_wall = spigot_id/2;
-    // root: ties the beam into the spigot wall
     translate([latch_x, -latch_w/2, latch_z0])
         cube([sqrt(r_wall*r_wall - (latch_w/2)*(latch_w/2)) - latch_x + 0.6, latch_w, 1.5]);
-    // beam
     translate([latch_x, -latch_w/2, latch_z0]) cube([latch_t, latch_w, z_batt0 + 0.6 - latch_z0]);
-    // hook: 45° lead-in below, ~30° retaining ramp above (battery rests on it)
     translate([0, latch_w/2, 0]) rotate([90, 0, 0]) linear_extrude(latch_w)
         polygon([[latch_x, z_batt0 - 1.8], [latch_x - latch_hook, z_batt0 - 0.8],
                  [latch_x - latch_hook, z_batt0 + 0.0], [latch_x, z_batt0 + 0.6]]);
 }
 
 /* ============================== BEZEL ================================ */
+// Snaps over the rim: an inward bead on the skirt clicks into the rim
+// groove; 6 slits let the skirt flex.  Pry it off at the notch.
 module bezel() {
     skirt_h = rim_h;
+    skirt_id = od - 2*rim_wall;
     difference() {
-        union() {
-            cylinder(d = od, h = skirt_h + bezel_plate);
-        }
-        translate([0, 0, -eps]) cylinder(d = od - 2*rim_wall, h = skirt_h + eps);
+        cylinder(d = od, h = skirt_h + bezel_plate);
+        translate([0, 0, -eps]) cylinder(d = skirt_id, h = skirt_h + eps);
         // display window with outward chamfer
         translate([0, 0, skirt_h - eps]) cylinder(d = view_d, h = bezel_plate + 2*eps);
         translate([0, 0, skirt_h + bezel_plate - 0.8]) cylinder(d1 = view_d, d2 = view_d + 1.6, h = 0.8 + eps);
         // glass recess (glass sits 0.4 into the plate, so it can't shift)
         translate([0, 0, skirt_h - eps]) cylinder(d = glass_d + 0.5, h = 0.4 + eps);
-        // M2 screw clearance + countersink
-        for (a = [45, 225]) rotate([0, 0, a])
-            translate([od/2 - 3, 0, skirt_h/2]) rotate([0, 90, 0]) {
-                cylinder(d = 2.3, h = 6, $fn = 24);
-                translate([0, 0, 2.2]) cylinder(d1 = 2.3, d2 = 4.2, h = 1.0, $fn = 24);
-            }
+        // flex slits + pry notch
+        for (i = [0 : 5]) rotate([0, 0, 30 + i * 60])
+            translate([skirt_id/2 - 1, -0.5, -eps]) cube([3, 1.0, skirt_h * 0.75]);
+        rotate([0, 0, 90]) translate([od/2, 0, -eps]) scale([1, 1.6, 1]) cylinder(d = 2.4, h = 1.2, $fn = 24);
         // top outer edge chamfer
         translate([0, 0, skirt_h + bezel_plate - 0.6])
             difference() { cylinder(d = od + 1, h = 1); cylinder(d1 = od, d2 = od - 1.2, h = 0.6 + eps); }
+    }
+    // snap bead (inside the skirt), with a lead-in so it rides over the rim
+    intersection() {
+        translate([0, 0, z_snap - z_rim0])
+            snap_ring(skirt_id + 0.2, rim_od - 2*snap_depth + 0.2, 0.6);
+        difference() {
+            cylinder(d = skirt_id + 0.1, h = skirt_h);
+            for (i = [0 : 5]) rotate([0, 0, 30 + i * 60])
+                translate([skirt_id/2 - 3, -0.5, -eps]) cube([4, 1.0, skirt_h]);
+        }
     }
 }
 
 /* =============================== CAP ================================= */
 module cap() {
     tot = cap_h;
-    difference() {
-        cylinder(d = od, h = tot);
-        // female thread (top)
-        translate([0, 0, tot - th_len])
-            thread_solid(th_major/2 - th_depth + th_clear, th_depth, th_len + eps, th_pitch);
-        translate([0, 0, tot - 1.0]) cylinder(d1 = th_major - 2*th_depth + 2*th_clear - 0.6, d2 = th_major + 2*th_clear + 0.8, h = 1 + eps);
-        // Molex plug headroom (opened to thread minor so the retainer petals fit)
-        translate([0, 0, cap_floor + sensor_h - eps]) cylinder(d = th_major - 2*th_depth + 2*th_clear - 0.2, h = cav_above + 2*eps);
-        // stepped sensor bore: upper body (centres the sensor) then flange
-        translate([0, 0, cap_floor]) cylinder(d = s_body_d + 2*fit, h = s_body_h + eps);
-        translate([0, 0, cap_floor + s_body_h]) cylinder(d = s_flange_d + 2*fit, h = sensor_h - s_body_h + eps);
-        translate([0, 0, cap_floor + s_body_h - 0.6]) cylinder(d1 = s_body_d + 2*fit, d2 = s_flange_d + 2*fit, h = 0.6 + eps);
-        // nose hole (O-ring passes through when the sensor drops in)
-        translate([0, 0, -eps]) cylinder(d = s_oring_d + 1.0, h = cap_floor + 2*eps);
-        // bottom outer chamfer
-        translate([0, 0, -eps]) difference() {
-            cylinder(d = od + 1, h = 0.8);
-            cylinder(d1 = od - 1.6, d2 = od, h = 0.8 + eps);
-        }
-        // grip flutes
-        for (i = [0 : 17]) rotate([0, 0, i * 20])
-            translate([od/2 + 0.6, 0, 2]) cylinder(d = 2.4, h = tot - th_len - 3, $fn = 16);
-    }
-    // 4 crush ribs on the upper-body section
-    for (i = [0 : 3]) rotate([0, 0, 45 + i * 90])
-        translate([s_body_d/2 + fit - 0.35, -0.6, cap_floor])
-            cube([0.8, 1.2, s_body_h - 1]);
-}
-
-/* ========================= SENSOR RETAINER ============================ */
-// Sits on the sensor's rear cone; its spring petals are pressed by the end
-// of the body's threaded spigot, clamping the sensor shoulder to the cap
-// floor.  Print petals-down (as exported) in PETG or TPU, no supports.
-z_flange_top = cap_floor + s_body_h + s_flange_h;
-cone_r0      = s_flange_d / 2;
-cone_r1      = s_boss_d / 2;
-function cone_z(r) = z_flange_top + 0.2 + s_taper_h * (cone_r0 - r) / (cone_r0 - cone_r1);
-ret_z0       = cone_z(ret_id / 2);                 // flat bottom edge touches the cone here
-ret_z1       = cap_h - th_len + ret_preload;       // petal top (spigot end + preload)
-ret_od       = s_flange_d + 2*fit - 0.4;           // tube OD inside the flange bore
-ret_petal_od = th_major - 2*th_depth + 2*th_clear - 0.6;
-
-module retainer() {
+    r_fb = s_flange_d/2 + fit;              // flange bore radius
     difference() {
         union() {
-            translate([0, 0, ret_z0]) cylinder(d = ret_od, h = ret_z1 - ret_z0);
-            translate([0, 0, ret_z1 - ret_petal_t]) cylinder(d = ret_petal_od, h = ret_petal_t);
+            cylinder(d = nose_od, h = z_sh - 4 + eps);                         // nose barrel
+            translate([0, 0, z_sh - 4]) cylinder(d1 = nose_od, d2 = od, h = (od - nose_od)/2);  // 45° shoulder
+            translate([0, 0, z_sh - 4 + (od - nose_od)/2 - eps]) cylinder(d = od, h = tot - (z_sh - 4 + (od - nose_od)/2) + eps);
+            // DIN cone + yoke face
+            translate([0, 0, nose_face_h]) cylinder(d1 = face_d, d2 = cone_d, h = cone_h + eps);
+            cylinder(d = face_d, h = nose_face_h + eps);
         }
-        translate([0, 0, ret_z0 - 1]) cylinder(d = ret_id, h = ret_z1 - ret_z0 + 2);
-        // 8 slots split the flange into spring petals
-        for (i = [0 : 7]) rotate([0, 0, i * 45])
-            translate([ret_od/2 - 0.3, -0.7, ret_z1 - ret_petal_t - 1]) cube([10, 1.4, ret_petal_t + 2]);
-        // wire notch so the sensor leads can lie flat if needed
-        translate([-2.5, ret_id/2 - 1, ret_z1 - 3]) cube([5, 4, 4]);
+        // trim the barrel under the cone back to the cone
+        translate([0, 0, -eps]) difference() {
+            cylinder(d = nose_od + 2, h = z_ch0);
+            translate([0, 0, nose_face_h]) cylinder(d1 = face_d, d2 = cone_d, h = cone_h + 2*eps);
+            cylinder(d = face_d, h = nose_face_h + 2*eps);
+        }
+
+        // ---- gas path ----
+        translate([0, 0, -eps]) cylinder(d = inlet_d, h = z_ch0 + 2*eps, $fn = 24);
+        translate([0, 0, -eps]) cylinder(d1 = 4.0, d2 = inlet_d, h = 1.2, $fn = 32);   // centring countersink
+        translate([0, 0, z_ch0]) cylinder(d = chamber_d, h = chamber_h + eps);
+        for (i = [0 : vent_n - 1]) rotate([0, 0, i * 360 / vent_n + 30])
+            translate([chamber_d/2 - 1.5, 0, z_ch0 + chamber_h/2]) teardrop_x(vent_d, nose_od);
+
+        // ---- sensor seat ----
+        // clearance for the M16 nose (sensor face sits 1.2 above the chamber ledge)
+        translate([0, 0, z_ch0 + 0.8]) cylinder(d = s_thread_d + 1.4, h = z_sh);
+        // O-ring sealing bore (seals the chamber off from the electronics)
+        translate([0, 0, z_sh - 4.6]) cylinder(d = oring_bore, h = 4.6 + eps);
+        translate([0, 0, z_sh - 0.6]) cylinder(d1 = oring_bore, d2 = oring_bore + 1.2, h = 0.6 + eps);
+        // upper body bore (locates the sensor), then flange bore
+        translate([0, 0, z_sh]) cylinder(d = s_body_d + 2*fit, h = s_body_h + eps);
+        translate([0, 0, z_flange0 - 0.6]) cylinder(d1 = s_body_d + 2*fit, d2 = 2*r_fb, h = 0.6 + eps);
+        translate([0, 0, z_flange0]) cylinder(d = 2*r_fb, h = sensor_h - s_body_h + eps);
+        // Molex plug headroom
+        translate([0, 0, z_sh + sensor_h - eps]) cylinder(d = th_major - 2*th_depth + 2*th_clear - 0.2, h = cav_above + 2*eps);
+
+        // ---- snap hook slots (beams are added back below) ----
+        for (i = [0 : hook_n - 1]) rotate([0, 0, i * 360 / hook_n])
+            translate([s_body_d/2, -hook_w/2 - 0.8, z_flange0 - 4])
+                cube([r_fb + hook_t + 1.2 - s_body_d/2, hook_w + 1.6, z_flange1 - hook_preload + 2.8 - (z_flange0 - 4)]);
+
+        // ---- body thread (female, 4-start) ----
+        translate([0, 0, tot - th_len])
+            thread_solid(th_major/2 - th_depth + th_clear, th_depth, th_len + eps, th_pitch, th_starts);
+        translate([0, 0, tot - 1.0]) cylinder(d1 = th_major - 2*th_depth + 2*th_clear - 0.6, d2 = th_major + 2*th_clear + 0.8, h = 1 + eps);
+
+        // grip flutes
+        for (i = [0 : 17]) rotate([0, 0, i * 20])
+            translate([od/2 + 0.6, 0, z_sh + 6]) cylinder(d = 2.4, h = tot - th_len - z_sh - 7, $fn = 16);
     }
+    // snap hooks
+    for (i = [0 : hook_n - 1]) rotate([0, 0, i * 360 / hook_n]) sensor_hook(r_fb);
 }
 
-/* ======================= BUTTON PLUNGER ============================== */
-module button() {
-    wall_len = od/2 - cav_bore/2 + 0.6;
-    cylinder(d = btn_d - 0.2, h = wall_len + 0.6, $fn = 32);   // shaft
-    cylinder(d = btn_d + 2.0, h = 1.0, $fn = 32);              // inner flange (stops fall-out)
-    translate([0, 0, wall_len + 0.6]) sphere(d = btn_d - 0.2, $fn = 32);
+// one cantilever hook: beam rooted 4 mm below the flange bore step, 45°
+// catch face resting on the flange's top edge, 45° lead-in on top
+module sensor_hook(r_fb) {
+    z_root = z_flange0 - 4;
+    zc = z_flange1 - hook_preload;              // where the catch face meets the flange edge radius
+    r_tip = r_fb - hook_reach;
+    translate([r_fb, -hook_w/2, z_root - eps]) cube([hook_t, hook_w, zc + 2.2 - z_root]);
+    translate([0, hook_w/2, 0]) rotate([90, 0, 0]) linear_extrude(hook_w)
+        polygon([[r_fb + eps, zc - (r_fb - (s_flange_d/2))],            // catch face start (at the beam)
+                 [r_tip, zc + (s_flange_d/2 - r_tip)],                  // 45° up and in
+                 [r_tip, zc + (s_flange_d/2 - r_tip) + 0.4],
+                 [r_fb + eps, zc + (s_flange_d/2 - r_tip) + 0.4 + hook_reach]]);  // 45° lead-in back out
+}
+
+// horizontal hole with a 45° roof (prints without support when z is up)
+module teardrop_x(d, len) {
+    rotate([0, 90, 0]) linear_extrude(len) hull() {
+        circle(d = d, $fn = 24);
+        translate([-d * 0.707, 0]) square(0.01, center = true);
+    }
 }
 
 /* ===================== FIT TEST (print first) ======================== */
-// Thin slices of every critical diameter: display seat, sensor bore,
-// nose hole, and 3 mm of mating thread.  ~15 min of printing.
+// Display seat ring, sensor seat (O-ring bore + upper-body bore),
+// flange ring, and 4 mm of the mating thread.  ~20 min of printing.
 module fit_test() {
-    // display seat ring
     difference() { cylinder(d = disp_bore + 3, h = 2); translate([0,0,-eps]) cylinder(d = disp_bore, h = 3); }
-    // sensor ring + nose ring
-    translate([52, 0, 0]) difference() {          // floor + upper-body step + flange step
-        cylinder(d = s_flange_d + 2*fit + 3, h = 6);
-        translate([0, 0, -eps]) cylinder(d = s_oring_d + 1.0, h = 7);
-        translate([0, 0, cap_floor]) cylinder(d = s_body_d + 2*fit, h = 7);
-        translate([0, 0, 4]) cylinder(d = s_flange_d + 2*fit, h = 7);
+    translate([52, 0, 0]) difference() {
+        cylinder(d = s_body_d + 2*fit + 4, h = 7.6);
+        translate([0, 0, -eps]) cylinder(d = s_thread_d + 1.4, h = 10);
+        translate([0, 0, 3 - eps]) cylinder(d = oring_bore, h = 4.6 + eps);
+        translate([0, 0, 7.6 - 0.6]) cylinder(d1 = oring_bore, d2 = oring_bore + 1.2, h = 0.6 + eps);
     }
-    // thread pair
+    translate([52, 0, 7.6 - eps]) difference() {
+        cylinder(d = s_body_d + 2*fit + 4, h = 2);
+        translate([0, 0, -eps]) cylinder(d = s_body_d + 2*fit, h = 3);
+    }
+    translate([90, 0, 0]) difference() {
+        cylinder(d = s_flange_d + 2*fit + 3, h = 3);
+        translate([0, 0, -eps]) cylinder(d = s_flange_d + 2*fit, h = 4);
+    }
     translate([0, 54, 0]) intersection() { body(); cylinder(d = od + 1, h = 4); }
     translate([54, 54, 0]) difference() {
         cylinder(d = od, h = 4);
-        translate([0, 0, -eps]) thread_solid(th_major/2 - th_depth + th_clear, th_depth, 4 + 2*eps, th_pitch);
+        translate([0, 0, -eps]) thread_solid(th_major/2 - th_depth + th_clear, th_depth, 4 + 2*eps, th_pitch, th_starts);
     }
 }
 
 /* ======================== Reference dummies ========================== */
-module dummy_sensor() {
+module dummy_sensor() {   // z = 0 at the shoulder
     color("#333") {
         cylinder(d = s_body_d, h = s_body_h);
         translate([0, 0, s_body_h]) cylinder(d = s_flange_d, h = s_flange_h);
@@ -372,25 +450,21 @@ module dummy_display() {
 
 /* ============================ Output ================================= */
 module assembly(explode = 0) {
-    cap_tot = cap_h;
     color("#3a6ea5") body();
-    translate([0, 0, body_h - rim_h + explode * 1.2]) color("#2c2c2c") bezel();
+    translate([0, 0, z_rim0 + explode * 1.2]) color("#2c2c2c") bezel();
     translate([0, 0, z_pcb + explode * 0.8]) dummy_display();
     color("purple") translate([-ads_l/2, -ads_w/2 - 3, z_cav0]) cube([ads_l, ads_w, 1.6]);
-    color("orange") translate([-batt_l/2, -batt_w/2, z_batt0 + 0.4 - explode * 0.5]) cube([batt_l, batt_w, batt_t]);
-    translate([0, 0, th_len - cap_tot - explode]) {
+    color("orange") translate([-batt_l/2, -batt_w/2, z_batt0 + 0.3 - explode * 0.5]) cube([batt_l, batt_w, batt_t]);
+    translate([0, 0, z_cap_in_body - explode * 2]) {
         color("#e0e0e0") cap();
-        color("#d08030") translate([0, 0, explode * 0.4]) retainer();
-        translate([0, 0, cap_floor]) dummy_sensor();
+        translate([0, 0, z_sh + explode * 1.2]) dummy_sensor();
     }
 }
 
 if (PART == "assembly")        assembly(0);
 else if (PART == "exploded")   assembly(18);
-else if (PART == "section")    difference() { assembly(0); translate([0, -50, -60]) cube([100, 100, 140]); }
+else if (PART == "section")    difference() { assembly(0); translate([-60, 0, -80]) cube([120, 60, 160]); }
 else if (PART == "body")       body();
 else if (PART == "bezel")      translate([0, 0, rim_h + bezel_plate]) rotate([180, 0, 0]) bezel();
 else if (PART == "cap")        cap();
-else if (PART == "retainer")   translate([0, 0, ret_z1]) rotate([180, 0, 0]) retainer();
-else if (PART == "button")     button();
 else if (PART == "fit_test")   fit_test();

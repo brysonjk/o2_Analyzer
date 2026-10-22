@@ -130,10 +130,9 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
       <p class="label">Envelope</p>
       <dl class="dims">
         <dt>Diameter</dt><dd>46.0 mm</dd>
-        <dt>Height</dt><dd>62.5 mm + 11.9 mm sensor nose</dd>
-        <dt>With diverter</dt><dd>83.2 mm</dd>
-        <dt>Cap thread</dt><dd>M42.4 × 2</dd>
-        <dt>Sensor thread</dt><dd>M16 × 1</dd>
+        <dt>Length</dt><dd>80.0 mm, diverter built in</dd>
+        <dt>Cap thread</dt><dd>M42.4, 4-start, 8 mm/turn</dd>
+        <dt>Printed parts</dt><dd>3, no screws</dd>
       </dl>
     </section>
 
@@ -148,14 +147,11 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
 const PARTS = [
   { id: "bezel",    name: "Bezel",             color: 0x2b3036, dz:  24, print: true },
   { id: "display",  name: "Round display",     color: 0x1d3f7a, dz:  15, ref: true },
-  { id: "button",   name: "Button plunger",    color: 0xe0a33a, dz:  15, print: true },
   { id: "ads",      name: "ADS1115",           color: 0x6a3d9a, dz:   7, ref: true },
   { id: "body",     name: "Body",              color: 0x3f6fa0, dz:   0, print: true },
   { id: "battery",  name: "LiPo 602030",       color: 0xc9cdd2, dz: -14, ref: true },
-  { id: "retainer", name: "Sensor retainer",   color: 0xd9822b, dz: -24, print: true },
-  { id: "sensor",   name: "R-22D sensor",      color: 0x23272b, dz: -46, ref: true },
-  { id: "cap",      name: "Cap",               color: 0xd8dde1, dz: -96, print: true },
-  { id: "diverter", name: "Flow diverter",     color: 0x1f9e8f, dz:-126, print: true },
+  { id: "sensor",   name: "R-22D sensor",      color: 0x23272b, dz: -34, ref: true },
+  { id: "cap",      name: "Cap + diverter",    color: 0xd8dde1, dz: -84, print: true },
 ];
 
 const canvas = document.getElementById("c");
@@ -256,8 +252,8 @@ controls.autoRotateSpeed = 1.6;
 let camGoal = null;
 function frame(instant, v) {
   const exploded = explodeTarget > 0.5;
-  const zMid = exploded ? -55 : -10;
-  const dist = exploded ? 520 : 260;
+  const zMid = exploded ? -50 : -12;
+  const dist = exploded ? 460 : 260;
   const dir = v === "cut" ? new THREE.Vector3(0.25, -1, 0.3) : new THREE.Vector3(0.9, 1.1, 0.55);
   dir.normalize().multiplyScalar(dist);
   const target = new THREE.Vector3(0, 0, zMid);

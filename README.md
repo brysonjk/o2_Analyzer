@@ -33,6 +33,7 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 | `diverter.scad` → `stl/diverter.stl` | Screw-on diverter for the open cap. Print nose-down, no supports, then run an M16×1 tap through it. |
 | `stl/bezel.stl` | Twist-lock display bezel. Already flipped face-down for printing. |
 | `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (O-ring bore and upper-body bore), flange ring, and a 4 mm thread pair. |
+| `step/*.step` | The same parts as STEP solids for Fusion 360 or SolidWorks (see CAD files below). |
 | `firmware/O2_Analyzer/O2_Analyzer.ino` | Arduino sketch. |
 
 ## ⚠️ Measure before you print
@@ -143,6 +144,29 @@ Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small cha
 A higher flow doesn't give a more accurate reading. It builds pressure at the sensor face and reads high. If the reading creeps up as you open the valve more, you're over-flowing.
 
 If the flow is hard to control on your valves, change the inlet with `inlet_d` (in `diverter.scad` or `o2_analyzer.scad`). Use about 1.2 for a gentler flow, or 2.0 if the reading responds too slowly.
+
+## CAD files (STEP) for Fusion 360, SolidWorks, Onshape
+The `step/` folder has every printed part as a true solid, with exact cylinders, faces and fully modeled threads. Open them with **File → Open** in Fusion 360 or SolidWorks. You can sketch on faces, fillet, cut and measure, then save in that program's own format.
+
+| File | Part | Origin (z = 0) |
+|---|---|---|
+| `step/body.step` | Body | spigot end |
+| `step/bezel.step` | Bezel | lower edge of the skirt |
+| `step/cap_open.step` | Open cap | cap floor |
+| `step/cap_diverter.step` | Cap with built-in diverter | nose face |
+| `step/diverter.step` | Screw-on diverter | nose face |
+| `step/o2_analyzer_assembly.step` | Everything assembled (open cap + diverter), with stand-ins for the sensor, display, ADS1115 and battery | — |
+
+Parts are in their assembled orientation, not their print orientation. For printing, use the STLs in `stl/`, or flip the bezel and the built-in cap nose-down in your slicer.
+
+A STEP file has no feature history, so you edit the solid directly (Fusion's Press/Pull, SolidWorks' Move Face). For parametric changes, edit `cad/o2_analyzer_cq.py`, which is a CadQuery port of the SCAD model with the same parameter names, and regenerate everything with:
+
+```
+pip install cadquery
+python3 cad/o2_analyzer_cq.py          # or: python3 cad/o2_analyzer_cq.py body cap_open
+```
+
+Each STEP part matches its OpenSCAD STL to within 0.7% of volume and has identical outer dimensions. Keep the two sources in sync if you change parameters.
 
 ## Opening in VS Code
 1. Clone this repo (VS Code: **Git: Clone**), or unzip the project somewhere permanent.

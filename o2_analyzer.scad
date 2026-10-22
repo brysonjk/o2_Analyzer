@@ -63,6 +63,7 @@ s_neck_h       = 5.2;    // * shoulder -> start of thread
 s_thread_d     = 16.0;   // M16 x 1
 s_thread_h     = 8.3;    // * (makes the 40.4 overall)
 plug_clear     = 11.0;   // space behind the boss face for the mating Molex plug + wire bend
+sensor_extra   = 0.5;    // extra radial room around the sensor (paper label, print tolerance)
 
 sensor_h       = s_body_h + s_flange_h + s_taper_h + s_boss_h;   // shoulder -> rear face (26.9)
 nose_len       = s_neck_h + s_thread_h;                          // shoulder -> sensor face (13.5)
@@ -83,7 +84,16 @@ fit            = 0.30;   // general radial clearance
 bezel_plate    = 1.2;
 rim_h          = 3.8;    // body rim engaged inside the bezel skirt
 rim_wall       = 1.2;    // bezel skirt wall
-snap_depth     = 0.45;   // bezel bead / rim groove engagement
+// twist-lock bezel: 3 lugs inside the skirt run in L-slots in the rim.
+// Push down, turn clockwise ~30°. Nothing has to flex, so nothing cracks.
+bay_n          = 3;
+bay_lug_w      = 14;     // lug width, degrees
+bay_lug_h      = 1.2;    // lug height
+bay_lug_z      = 0.6;    // lug bottom, above the skirt's lower edge
+bay_lug_depth  = 0.7;    // how far the lug sticks in from the skirt wall
+bay_depth      = 0.55;   // slot depth into the rim
+bay_twist      = 30;     // degrees of turn from entry to locked
+bay_lock       = 0.05;   // ramp interference at the locked end (clamps the bezel)
 
 // body <-> cap thread: 4-start, so the cap closes in < 1 turn and the
 // sensor wires barely twist
@@ -92,7 +102,8 @@ th_starts      = 4;      // lead = pitch * starts = 8 mm per turn
 th_depth       = 0.9;
 th_len         = 7.0;
 th_major       = 42.4;   // male (body spigot) major diameter
-th_clear       = 0.30;   // radial clearance male/female
+th_clear       = 0.40;   // radial clearance male/female
+th_relief      = 1.5;    // undercut below the cap thread so the shoulder seats before the spigot bottoms
 spigot_id      = 37.0;   // must pass the battery diagonal (36.1 for 602030)
 
 // built-in diverter (bottom of the cap)
@@ -112,7 +123,7 @@ oring_bore     = s_oring_d - 0.5;   // radial squeeze ≈ 0.25 mm on the sensor 
 hook_n         = 3;
 hook_w         = 5.0;
 hook_t         = 1.4;    // beam thickness (flex direction)
-hook_reach     = 1.05;   // inward reach past the flange bore
+hook_overlap   = 0.75;   // how far the hook tip reaches over the flange edge
 hook_preload   = 0.4;    // how far the 45° hook face sits below the flange edge
 
 $fn = 96;
@@ -128,7 +139,6 @@ z_pcb     = z_cav0 + ads_zone + comp_h;    // PCB bottom face rests here
 z_glass   = z_pcb + pcb_t + glass_stack;   // glass top
 body_h    = z_glass;
 z_rim0    = body_h - rim_h;
-z_snap    = z_rim0 + rim_h * 0.45;         // centre of the snap bead
 
 disp_bore = pcb_d + 2*fit + 0.4;
 cav_bore  = od - 2*2.4;                    // ADS / component cavity
@@ -227,8 +237,14 @@ module body() {
         // flexure power button: U-slot through the wall + thinned tab
         rotate([0, 0, btn_angle]) button_cut();
 
-        // snap groove around the rim for the bezel bead
-        translate([0, 0, z_snap]) snap_ring(rim_od + 1, rim_od - 2*snap_depth, 1.0);
+        // twist-lock slots in the rim for the bezel lugs
+        for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n]) bayonet_slot();
+
+        // thread relief at the shoulder: the cap's top turn can run fully home
+        translate([0, 0, th_len - 0.8]) difference() {
+            cylinder(d = th_major + 2, h = 0.8 + eps);
+            translate([0, 0, -eps]) cylinder(d = th_major - 2*th_depth, h = 1);
+        }
 
         // top chamfer on rim inner edge (eases display insertion)
         translate([0, 0, body_h - 0.8]) cylinder(d1 = disp_bore, d2 = disp_bore + 1.6, h = 0.8 + eps);
@@ -247,11 +263,29 @@ module body() {
     for (m = [0, 1]) mirror([m, 0, 0]) battery_latch();
 }
 
-// ring-shaped groove/bead with 45° flanks, centred on z = 0
-module snap_ring(d_out, d_in, h) {
-    rotate_extrude($fn = 96) polygon([
-        [d_out/2, -h/2 - (d_out - d_in)/2], [d_in/2, -h/2 + 0.0],
-        [d_in/2,  h/2 - 0.0], [d_out/2, h/2 + (d_out - d_in)/2]]);
+// annular sector between radii r0..r1, angles a0..a1 (deg), heights z0..z1
+module sector(r0, r1, a0, a1, z0, z1) {
+    translate([0, 0, z0]) rotate([0, 0, a0])
+        rotate_extrude(angle = a1 - a0, $fn = 192) translate([r0, 0]) square([r1 - r0, z1 - z0]);
+}
+
+// L-slot: vertical entry from the rim top, then a ramped run clockwise
+module bayonet_slot() {
+    r_in  = rim_od/2 - bay_depth;
+    r_out = rim_od/2 + 1;
+    lug0  = z_rim0 + bay_lug_z;
+    zg0   = lug0 - 0.15;
+    ztop0 = lug0 + bay_lug_h + 0.15;              // groove top at the entry
+    ztop1 = lug0 + bay_lug_h - bay_lock;           // groove top at the locked end
+    aE    = bay_lug_w/2 + 2;                       // entry half-width
+    aEnd  = -(bay_twist + bay_lug_w/2 + 1);
+    sector(r_in, r_out, -aE, aE, zg0, body_h + 1);
+    N = 10;
+    for (i = [0 : N - 1]) {
+        a1 = aE - (aE - aEnd) * i / N;
+        a0 = aE - (aE - aEnd) * (i + 1) / N;
+        sector(r_in, r_out, a0 - 0.01, a1 + 0.01, zg0, ztop0 - (ztop0 - ztop1) * i / (N - 1));
+    }
 }
 
 /* ---- flexure button ---- */
@@ -303,8 +337,9 @@ module battery_latch() {
 }
 
 /* ============================== BEZEL ================================ */
-// Snaps over the rim: an inward bead on the skirt clicks into the rim
-// groove; 6 slits let the skirt flex.  Pry it off at the notch.
+// Twist-lock: push it down with the lugs in the rim's entry slots, then turn
+// it clockwise about 30° until snug.  Small notches on the skirt edge mark
+// the lugs.  Turn it back the other way to remove it.
 module bezel() {
     skirt_h = rim_h;
     skirt_id = od - 2*rim_wall;
@@ -316,36 +351,29 @@ module bezel() {
         translate([0, 0, skirt_h + bezel_plate - 0.8]) cylinder(d1 = view_d, d2 = view_d + 1.6, h = 0.8 + eps);
         // glass recess (glass sits 0.4 into the plate, so it can't shift)
         translate([0, 0, skirt_h - eps]) cylinder(d = glass_d + 0.5, h = 0.4 + eps);
-        // flex slits + pry notch
-        for (i = [0 : 5]) rotate([0, 0, 30 + i * 60])
-            translate([skirt_id/2 - 1, -0.5, -eps]) cube([3, 1.0, skirt_h * 0.75]);
-        rotate([0, 0, 90]) translate([od/2, 0, -eps]) scale([1, 1.6, 1]) cylinder(d = 2.4, h = 1.2, $fn = 24);
+        // lug index notches on the skirt's lower edge
+        for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n])
+            translate([od/2, 0, -eps]) rotate([0, 0, 45]) cube([1.2, 1.2, 1.0], center = true);
         // top outer edge chamfer
         translate([0, 0, skirt_h + bezel_plate - 0.6])
             difference() { cylinder(d = od + 1, h = 1); cylinder(d1 = od, d2 = od - 1.2, h = 0.6 + eps); }
     }
-    // snap bead (inside the skirt), with a lead-in so it rides over the rim
-    intersection() {
-        translate([0, 0, z_snap - z_rim0])
-            snap_ring(skirt_id + 0.2, rim_od - 2*snap_depth + 0.2, 0.6);
-        difference() {
-            cylinder(d = skirt_id + 0.1, h = skirt_h);
-            for (i = [0 : 5]) rotate([0, 0, 30 + i * 60])
-                translate([skirt_id/2 - 3, -0.5, -eps]) cube([4, 1.0, skirt_h]);
-        }
-    }
+    // lugs
+    for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n])
+        sector(skirt_id/2 - bay_lug_depth, skirt_id/2 + 0.2, -bay_lug_w/2, bay_lug_w/2,
+               bay_lug_z, bay_lug_z + bay_lug_h);
 }
 
 /* =============================== CAP ================================= */
 module cap() {
     tot = cap_h;
-    r_fb = s_flange_d/2 + fit;              // flange bore radius
+    r_fb = s_flange_d/2 + fit + sensor_extra;   // flange bore radius
     difference() {
         if (cap_style == "diverter") cap_shell_diverter(tot); else cap_shell_open(tot);
         // ---- sensor seat (both styles) ----
         // upper body bore (locates the sensor), then flange bore
-        translate([0, 0, z_sh]) cylinder(d = s_body_d + 2*fit, h = s_body_h + eps);
-        translate([0, 0, z_flange0 - 0.6]) cylinder(d1 = s_body_d + 2*fit, d2 = 2*r_fb, h = 0.6 + eps);
+        translate([0, 0, z_sh]) cylinder(d = s_body_d + 2*(fit + sensor_extra), h = s_body_h + eps);
+        translate([0, 0, z_flange0 - 0.6]) cylinder(d1 = s_body_d + 2*(fit + sensor_extra), d2 = 2*r_fb, h = 0.6 + eps);
         translate([0, 0, z_flange0]) cylinder(d = 2*r_fb, h = sensor_h - s_body_h + eps);
         // Molex plug headroom
         translate([0, 0, z_sh + sensor_h - eps]) cylinder(d = th_major - 2*th_depth + 2*th_clear - 0.2, h = cav_above + 2*eps);
@@ -359,6 +387,8 @@ module cap() {
         translate([0, 0, tot - th_len])
             thread_solid(th_major/2 - th_depth + th_clear, th_depth, th_len + eps, th_pitch, th_starts);
         translate([0, 0, tot - 1.0]) cylinder(d1 = th_major - 2*th_depth + 2*th_clear - 0.6, d2 = th_major + 2*th_clear + 0.8, h = 1 + eps);
+        // relief below the thread: room for the spigot so the cap seats on the shoulder
+        translate([0, 0, tot - th_len - th_relief]) cylinder(d = th_major + 2*th_clear + 0.4, h = th_relief + eps);
 
         // grip flutes
         z_fl = cap_style == "diverter" ? z_sh + 6 : 2;
@@ -419,13 +449,13 @@ module cap_shell_diverter(tot) {
 module sensor_hook(r_fb) {
     z_root = z_flange0 - 4;
     zc = z_flange1 - hook_preload;              // where the catch face meets the flange edge radius
-    r_tip = r_fb - hook_reach;
+    r_tip = s_flange_d/2 - hook_overlap;
     translate([r_fb, -hook_w/2, z_root - eps]) cube([hook_t, hook_w, zc + 2.2 - z_root]);
     translate([0, hook_w/2, 0]) rotate([90, 0, 0]) linear_extrude(hook_w)
         polygon([[r_fb + eps, zc - (r_fb - (s_flange_d/2))],            // catch face start (at the beam)
                  [r_tip, zc + (s_flange_d/2 - r_tip)],                  // 45° up and in
                  [r_tip, zc + (s_flange_d/2 - r_tip) + 0.4],
-                 [r_fb + eps, zc + (s_flange_d/2 - r_tip) + 0.4 + hook_reach]]);  // 45° lead-in back out
+                 [r_fb + eps, zc + (s_flange_d/2 - r_tip) + 0.4 + (r_fb - r_tip)]]);  // 45° lead-in back out
 }
 
 // horizontal hole with a 45° roof (prints without support when z is up)
@@ -442,18 +472,18 @@ module teardrop_x(d, len) {
 module fit_test() {
     difference() { cylinder(d = disp_bore + 3, h = 2); translate([0,0,-eps]) cylinder(d = disp_bore, h = 3); }
     translate([52, 0, 0]) difference() {
-        cylinder(d = s_body_d + 2*fit + 4, h = 7.6);
+        cylinder(d = s_body_d + 2*(fit + sensor_extra) + 4, h = 7.6);
         translate([0, 0, -eps]) cylinder(d = s_thread_d + 1.4, h = 10);
         translate([0, 0, 3 - eps]) cylinder(d = oring_bore, h = 4.6 + eps);
         translate([0, 0, 7.6 - 0.6]) cylinder(d1 = oring_bore, d2 = oring_bore + 1.2, h = 0.6 + eps);
     }
     translate([52, 0, 7.6 - eps]) difference() {
-        cylinder(d = s_body_d + 2*fit + 4, h = 2);
-        translate([0, 0, -eps]) cylinder(d = s_body_d + 2*fit, h = 3);
+        cylinder(d = s_body_d + 2*(fit + sensor_extra) + 4, h = 2);
+        translate([0, 0, -eps]) cylinder(d = s_body_d + 2*(fit + sensor_extra), h = 3);
     }
     translate([90, 0, 0]) difference() {
-        cylinder(d = s_flange_d + 2*fit + 3, h = 3);
-        translate([0, 0, -eps]) cylinder(d = s_flange_d + 2*fit, h = 4);
+        cylinder(d = s_flange_d + 2*(fit + sensor_extra) + 3, h = 3);
+        translate([0, 0, -eps]) cylinder(d = s_flange_d + 2*(fit + sensor_extra), h = 4);
     }
     translate([0, 54, 0]) intersection() { body(); cylinder(d = od + 1, h = 4); }
     translate([54, 54, 0]) difference() {

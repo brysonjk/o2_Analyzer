@@ -9,7 +9,7 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 | `stl/cap_diverter.stl` | 80.0 mm, diverter built in | The shortest unit with nothing extra to carry or lose. The sensor nose is sealed inside the cap. |
 
 ```
-   ┌──────── BEZEL ────────┐   snaps over the rim, holds the display glass
+   ┌──────── BEZEL ────────┐   twist-lock, holds the display glass
    │   ESP32-2424S012       │   USB-C slot + flexure power button in the wall
    │   ADS1115 bay          │
    │── floor (wire holes) ──│
@@ -31,7 +31,7 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 | `stl/cap_open.stl` | Open cap: the sensor nose and O-ring stick out. Print open-end up, no supports. |
 | `stl/cap_diverter.stl` | Cap with the diverter built in. Print nose-down, as exported, no supports. |
 | `diverter.scad` → `stl/diverter.stl` | Screw-on diverter for the open cap. Print nose-down, no supports, then run an M16×1 tap through it. |
-| `stl/bezel.stl` | Snap-on display bezel. Already flipped face-down for printing. |
+| `stl/bezel.stl` | Twist-lock display bezel. Already flipped face-down for printing. |
 | `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (O-ring bore and upper-body bore), flange ring, and a 4 mm thread pair. |
 | `firmware/O2_Analyzer/O2_Analyzer.ino` | Arduino sketch. |
 
@@ -46,14 +46,18 @@ The sensor profile comes from the AII PSR-11-39-MD drawing: 40.4 mm overall and 
 
 Export a part with: `openscad -D 'PART="body"' -o body.stl o2_analyzer.scad` (also `cap`, `bezel`, `fit_test`, `assembly`, `exploded`, `section`). Choose the cap version with `cap_style`: `openscad -D 'cap_style="diverter"' -D 'PART="cap"' -o cap_diverter.stl o2_analyzer.scad`. The default is `"open"`.
 
-Print in PETG or ASA with 0.2 mm layers and 4 perimeters, because the threads and snap features need them. The body/cap thread is 4-start: 2 mm between ridges, 8 mm advance per turn, and 0.3 mm clearance. If yours binds, raise `th_clear` to 0.35–0.4.
+Print in PETG or ASA with 0.2 mm layers and 4 perimeters, because the threads and snap features need them. The body/cap thread is 4-start: 2 mm between ridges, 8 mm advance per turn, and 0.4 mm clearance.
+
+The body prints spigot-down, so its thread starts on the build plate. Turn on your slicer's **elephant foot compensation** (about 0.15 mm in Bambu Studio). Otherwise the first layers swell and the cap won't start. The spigot also has a 2 mm lead-in chamfer and thread relief at both ends to help.
 
 **Tuning after a test print:**
 | Feature | Parameter | Too stiff | Too loose |
 |---|---|---|---|
 | Battery latches | `latch_hook` (1.0) | 0.8 | 1.2 |
-| Sensor snap hooks | `hook_reach` (1.05) / `hook_preload` (0.4) | `hook_reach` 0.85 | `hook_preload` 0.6 |
-| Bezel snap | `snap_depth` (0.45) | 0.35 | 0.55 |
+| Body/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
+| Sensor fit in the cap | `sensor_extra` (0.5) | 0.7 | 0.3 |
+| Sensor snap hooks | `hook_overlap` (0.75) / `hook_preload` (0.4) | `hook_overlap` 0.6 | `hook_preload` 0.6 |
+| Bezel twist-lock | `bay_lock` (0.05) | 0 | 0.10 |
 | Power button | `btn_reach` (19.8) | — | lower it, e.g. 19.5, if a press doesn't click the switch |
 
 ## Bill of materials
@@ -87,7 +91,7 @@ The board's on/off button drives its IP5306 power chip. Press once to turn on; d
 ## Assembly
 1. Solder the wires to the ADS1115. Seat it in the floor recess with double-sided foam tape, then feed the sensor and battery leads down through the two floor holes. Leave the sensor leads about 3 cm longer than the straight run. The cap turns a little under one turn, and that slack takes up the twist.
 2. Plug the JST-SH pigtail and the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The power button lines up with the flexible tab in the wall.
-3. Press the bezel straight down until it clicks over the rim. To remove it, put a fingernail in the pry notch.
+3. Fit the bezel: line up the three small notches on its lower edge with the three slots in the rim, press it down flat, then turn it clockwise about 30° until it stops. To remove it, turn it counter-clockwise and lift it off. Nothing has to flex, so it won't crack.
 4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
 5. Plug the Molex into the back of the sensor. Push the sensor nose-first into the cap until the flange clicks under the three hooks.
    - **Open cap:** the nose and O-ring come out through the floor hole.

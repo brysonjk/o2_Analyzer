@@ -42,7 +42,7 @@ The sensor profile is measured from a real PSR-11-39-MD:
 - 40.5 mm overall.
 - A 6.59 mm threaded nose, with the 17.7 × 1.7 mm O-ring at its base.
 - A Ø26 × 15.75 mm body.
-- A Ø28.3 × 8.5 mm flange.
+- A Ø28.5 × 8.5 mm flange. AII's drawing says Ø29.3 (1.154"), so other makes may differ.
 
 Other R-22D-type sensors may differ slightly, so check them against yours. Only the rear taper and boss (marked `*`) are still estimates. `s_body_h` and `s_flange_h` decide where the snap hooks catch and where the open cap's flange seat is, so they matter most. If you change the nose values, change them in `diverter.scad` too.
 - `plug_clear` — the space behind the sensor for the Molex plug and its wire bend (11 mm).

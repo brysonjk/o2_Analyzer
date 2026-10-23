@@ -47,6 +47,7 @@ The sensor profile is measured from a real PSR-11-39-MD:
 
 Other R-22D-type sensors may differ slightly, so check them against yours. Only the rear taper and boss (marked `*`) are still estimates. `s_body_h` and `s_flange_h` decide where the snap hooks catch and where the open cap's flange seat is, so they matter most. If you change the nose values, change them in `diverter.scad` too.
 - `plug_clear` — the space behind the sensor for the Molex plug and its wire bend (11 mm).
+- `pcb_d`, `pcb_tab_w`, `pcb_tab_r`: the board outline, a 37 mm circle plus a 14.23 mm tab at the USB-C end, 38.5 mm overall, from the board's spec drawing.
 - `glass_d`, `glass_stack`, `comp_h` — display glass diameter, glass-to-PCB height, and the tallest component under the PCB.
 - `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach` — where the USB-C port and the on/off button sit, and how far in the button nub reaches.
 - `batt_*` — the battery size. The default is a 602030 (6×20×30 mm, ≈300 mAh). The pocket must fit inside `spigot_id` (37 mm), which allows a diagonal of up to ~36.5 mm.

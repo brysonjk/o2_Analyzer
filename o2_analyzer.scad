@@ -32,7 +32,9 @@ div_len = 15.39;          // diverter.scad length (its z_top); its rear face sea
 
 /* ---------- MEASURE THESE WITH CALIPERS BEFORE PRINTING ---------- */
 // ESP32-2424S012 (bare board, out of its stock case)
-pcb_d          = 38.5;   // PCB outer diameter (spec: 38.5 x 37 mm)
+pcb_d          = 37.0;   // round part of the PCB (spec drawing)
+pcb_tab_w      = 14.23;  // tab at the USB-C end (spec drawing)
+pcb_tab_r      = 20.0;   // centre -> end of the tab (38.5 overall - 18.5)
 glass_d        = 36.6;   // round display glass / backlight frame dia
 glass_stack    = 3.6;    // glass top -> PCB top surface (display side)
 pcb_t          = 1.0;
@@ -46,7 +48,7 @@ usb_w          = 9.6;
 usb_h          = 3.8;
 btn_angle      = 0;      // IP5306 on/off button (side-actuated)
 btn_z_off      = 1.6;    // button centre below PCB bottom face
-btn_reach      = 19.8;   // radius the flexure nub reaches in to (button cap ≈ 0.3 beyond)
+btn_reach      = 19.4;   // radius the flexure nub reaches in to (switch sits at the 37 mm board edge)
 
 // R-22D type sensor (PSR-11-39-MD) — measured with calipers on a real sensor
 s_total_h      = 40.5;   // thread tip -> rear face
@@ -105,9 +107,9 @@ bay_lock       = 0.05;   // ramp interference at the locked end (clamps the beze
 //              whose tip pins the bezel to the rim.
 // CLI:  openscad -D 'bezel_lock="screw"' -D 'PART="bezel"' -o bezel_screw.stl o2_analyzer.scad
 bezel_lock     = "detent";
-det_a0         = 28;     // detent strip: fixed end angle (deg, in the solid rim between slots)
-det_a1         = 58;     // free end angle
-det_bump_a     = 52;     // ridge angle on the strip
+det_a0         = 52;     // detent strip: fixed end angle (deg, in the solid rim between slots,
+det_a1         = 76;     //   and clear of the PCB tab at the USB-C end)
+det_bump_a     = 70;     // ridge angle on the strip
 det_bump       = 0.6;    // ridge height above the rim surface (0.3 mm rides on the skirt)
 det_slot       = 0.45;   // slot width around the strip
 pin_a          = 18;     // screw pin hole angle in the rim (locked position)
@@ -160,7 +162,7 @@ z_glass   = z_pcb + pcb_t + glass_stack;   // glass top
 body_h    = z_glass;
 z_rim0    = body_h - rim_h;
 
-disp_bore = pcb_d + 2*fit + 0.4;
+disp_bore = pcb_d + 2*fit;
 cav_bore  = od - 2*2.4;                    // ADS / component cavity
 rim_od    = od - 2*rim_wall - 2*fit;
 
@@ -244,8 +246,9 @@ module body() {
         translate([0, 0, z_cav0]) cylinder(d = cav_bore, h = z_pcb - z_cav0 + eps);
         translate([-ads_l/2, -ads_w/2 - 3, z_cav0 - 0.6]) cube([ads_l, ads_w, 1]);
 
-        // display seat
+        // display seat: the round board plus a pocket for its USB-C tab
         translate([0, 0, z_pcb]) cylinder(d = disp_bore, h = body_h);
+        translate([0, 0, z_pcb - eps]) linear_extrude(pcb_t + 0.3 + eps) pcb_tab_2d(fit);
 
         // USB-C slot (opening flares outward for the plug overmould)
         rotate([0, 0, usb_angle]) translate([od/2 - 3.5, 0, z_pcb - usb_h/2 - 0.2]) {
@@ -287,8 +290,8 @@ module body() {
     // PCB support pads in the cavity (3 pads, skip USB + button sectors)
     for (a = [usb_angle + 120, usb_angle + 240, usb_angle + 60])
         if (abs(((a - btn_angle + 540) % 360) - 180) > 20)
-        rotate([0, 0, a]) translate([cav_bore/2 - 2.4, -2, z_cav0])
-            cube([2.6, 4, z_pcb - z_cav0]);
+        rotate([0, 0, a]) translate([pcb_d/2 - 1.2, -2, z_cav0])
+            cube([cav_bore/2 - pcb_d/2 + 1.4, 4, z_pcb - z_cav0]);     // 1.2 mm under the board edge
 
     // battery latches: two spring beams inside the spigot
     for (m = [0, 1]) mirror([m, 0, 0]) battery_latch();
@@ -306,8 +309,15 @@ z_det1 = z_rim0 + 2.2;           // strip top
 z_pin  = z_rim0 + 2.6;           // screw axis height
 det_sd = det_slot / (2 * PI * rim_od/2) * 360;    // slot width in degrees
 
+// the PCB's tab, as a 2D outline grown by `off`
+module pcb_tab_2d(off = 0) {
+    rotate([0, 0, usb_angle - 270]) offset(delta = off)
+        translate([-pcb_tab_w/2, -pcb_tab_r]) square([pcb_tab_w, pcb_tab_r]);
+}
+
 module detent_cut() {
     r0 = disp_bore/2 - 0.5;  r1 = rim_od/2 + 0.6;
+    sector(disp_bore/2 - eps, rim_od/2 - 1.9, det_a0, det_a1 + det_sd, z_det0 - eps, z_det1 + eps);   // thin the strip to 1.9 mm
     sector(r0, r1, det_a0, det_a1 + det_sd, z_det0 - det_slot, z_det0);        // below the strip
     sector(r0, r1, det_a0, det_a1 + det_sd, z_det1, z_det1 + det_slot);        // above the strip
     sector(r0, r1, det_a1, det_a1 + det_sd, z_det0 - det_slot, z_det1 + det_slot);   // free end
@@ -537,7 +547,11 @@ module teardrop_x(d, len) {
 // Display seat ring, sensor seat (O-ring bore + upper-body bore),
 // flange ring, and 4 mm of the mating thread.  ~20 min of printing.
 module fit_test() {
-    difference() { cylinder(d = disp_bore + 3, h = 2); translate([0,0,-eps]) cylinder(d = disp_bore, h = 3); }
+    difference() {          // display seat: drop the board in, tab into its pocket
+        cylinder(d = 2*pcb_tab_r + 4, h = 2);
+        translate([0, 0, -eps]) cylinder(d = disp_bore, h = 3);
+        translate([0, 0, -eps]) linear_extrude(3) pcb_tab_2d(fit);
+    }
     // sensor seat: body bore with the flange step on top (open cap seats here)
     translate([52, 0, 0]) difference() {
         cylinder(d = s_bore_flange + 4, h = 6);
@@ -572,10 +586,10 @@ module dummy_sensor() {   // z = 0 at the shoulder
     color("red") for (x = [-2.5, 0, 2.5]) translate([x, 0, sensor_h + 6]) cylinder(d = 1.2, h = 3, $fn = 8);
 }
 module dummy_display() {
-    color("darkgreen") cylinder(d = pcb_d, h = pcb_t);
+    color("darkgreen") linear_extrude(pcb_t) union() { circle(d = pcb_d); pcb_tab_2d(); }
     color("black") translate([0, 0, pcb_t]) cylinder(d = glass_d, h = glass_stack);
     color("royalblue") translate([0, 0, pcb_t + glass_stack - 0.05]) cylinder(d = 32.4, h = 0.1);
-    color("gray") rotate([0, 0, usb_angle]) translate([pcb_d/2 - 7, -4.5, -3.2]) cube([7.3, 9, 3.2]);
+    color("gray") rotate([0, 0, usb_angle]) translate([pcb_tab_r - 7.3, -4.5, -3.2]) cube([7.3, 9, 3.2]);
 }
 
 /* ============================ Output ================================= */

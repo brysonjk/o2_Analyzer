@@ -5,32 +5,24 @@
 //    BEZEL    : screws onto the threaded body rim, holds the display glass
 //    BODY     : display seat, flexure power button, ADS1115 bay, battery
 //               pocket with spring latches, 4-start threaded spigot
-//    CAP      : sensor seat; "open" (nose out, separate diverter) or with
-//               the flow diverter built in
-//    RETAINER : collar on the sensor flange, clamped by the body when the
-//               cap is screwed on, so the sensor can't push up
+//    CAP      : the sensor sits on a thin floor with its threaded nose out;
+//               the O-ring seals in the floor hole. Tapers to the diverter.
+//    DIVERTER : (diverter.scad) screws onto the sensor nose like a nut and
+//               clamps the cap floor, so the sensor can't push up
 //
 //  Unscrew the CAP (< 1 turn)  ->  pull the battery down out of its
-//  pocket; lift the retainer collar off and pull the sensor out.
+//  pocket; with the diverter off, lift the sensor out.
 //
 //  Render one part:  set PART below, or from the CLI:
 //     openscad -D 'PART="body"' -o body.stl o2_analyzer.scad
 // =====================================================================
 
-PART = "assembly";   // assembly | exploded | section | body | cap | bezel | retainer | fit_test
+PART = "assembly";   // assembly | exploded | section | body | cap | bezel | fit_test
 
-// Cap style:
-//   "open"     - the sensor's M16x1 nose and O-ring stick out of the cap.
-//                Use the screw-on diverter.scad, or any standard M16 T-piece /
-//                inflator adapter.
-//   "diverter" - restrictor, chamber, vents, yoke face and DIN cone built
-//                into the cap (shortest, one less part).
-// CLI:  openscad -D 'cap_style="diverter"' -D 'PART="cap"' -o cap_diverter.stl o2_analyzer.scad
-cap_style = "open";
-show_diverter = true;     // assembly views: show the screw-on diverter on the open cap
+show_diverter = true;     // assembly views: show the screw-on diverter
 
 use <diverter.scad>
-div_len = 15.39;          // diverter.scad length (its z_top); its rear face seats on the sensor shoulder
+div_len = 13.59;          // diverter.scad length (its z_top); its rear face clamps the cap floor
 
 /* ---------- MEASURE THESE WITH CALIPERS BEFORE PRINTING ---------- */
 // ESP32-2424S012 (bare board, out of its stock case)
@@ -108,25 +100,11 @@ th_clear       = 0.40;   // radial clearance male/female
 th_relief      = 1.5;    // undercut below the cap thread so the shoulder seats before the spigot bottoms
 spigot_id      = 37.0;   // must pass the battery diagonal (36.1 for 602030)
 
-// built-in diverter (bottom of the cap)
-inlet_d        = 1.6;    // restrictor orifice
-vent_d         = 2.2;
-vent_n         = 6;
-face_d         = 18.0;   // flat face for yoke valves (covers the outlet O-ring)
-cone_d         = 25.0;   // seats in DIN sockets (G5/8, Ø≈20.6–22.9)
-cone_h         = 4.0;
-nose_face_h    = 1.6;
-chamber_d      = 15.0;
-chamber_h      = 2.0;    // gas space in front of the sensor face
-nose_od        = 26.0;
+// cap: the sensor shoulder sits on a floor; the O-ring seals in its hole
+cap_floor_t    = 1.8;    // = O-ring band; keep in sync with diverter.scad
+cap_wall       = 2.0;    // wall around the sensor below the body thread
 oring_squeeze  = 0.2;    // radial squeeze on the O-ring (~12% of its 1.7 mm section)
 oring_bore     = s_oring_d - 2*oring_squeeze;
-
-// sensor retainer collar: sits on the flange edge; its spring petals are
-// pressed by the end of the body's spigot when the cap is screwed on
-ret_preload    = 0.5;    // petal deflection with the cap fully tightened
-ret_petal_t    = 0.8;
-ret_id         = 25.8;   // passes the Molex plug and the rear boss
 
 $fn = 96;
 eps = 0.01;
@@ -146,22 +124,17 @@ disp_bore = pcb_d + 2*fit;
 cav_bore  = od - 2*2.4;                    // ADS / component cavity
 rim_od    = od - 2*rim_wall - 2*fit;
 
-/* ---------- Derived heights: CAP (z = 0 at the nose face) ---------- */
-z_ch0     = nose_face_h + cone_h;          // chamber floor
-z_sface   = z_ch0 + chamber_h;             // sensor face (nominal)
-// open style: the sensor sits on its flange, with the shoulder flush with the
-// cap's bottom face, so the whole threaded nose and the O-ring are exposed
-z_sh      = cap_style == "diverter" ? z_sface + nose_len : 0;   // sensor shoulder plane
+/* ---------- Derived heights: CAP (z = 0 at its bottom face) ---------- */
+z_sh      = cap_floor_t;                   // sensor shoulder rests on the floor
 z_flange0 = z_sh + s_body_h;
-z_flange1 = z_flange0 + s_flange_h;        // flange top edge (the retainer sits here)
+z_flange1 = z_flange0 + s_flange_h;
 cav_above = max(1.0, plug_clear - th_len); // the spigot bore is free space too
 cap_h     = z_sh + sensor_h + cav_above + th_len;
 z_cap_in_body = th_len - cap_h;            // cap origin in body coordinates
 
 echo(str("Body height: ", body_h, "   Cap height: ", cap_h));
-echo(str("Cap style: ", cap_style, "   overall length: ", body_h + bezel_plate + cap_h - th_len,
-         cap_style == "diverter" ? " (diverter built in)" : str(" + ", nose_len, " sensor nose")));
-echo(str("Inlet area ", PI*inlet_d*inlet_d/4, " mm²   vent area ", vent_n*PI*vent_d*vent_d/4, " mm²"));
+echo(str("Overall length: ", body_h + bezel_plate + cap_h - th_len, " + ", nose_len - cap_floor_t,
+         " sensor nose;  with the diverter: ", body_h + bezel_plate + cap_h - th_len + div_len));
 
 /* =====================================================================
    Helical thread: horizontal cross-section r(θ) extruded with twist.
@@ -360,21 +333,29 @@ module bezel() {
 }
 
 /* =============================== CAP ================================= */
+// Full width only where it screws onto the body; below that it tapers in to
+// follow the sensor with cap_wall all round, ending near the diverter's size.
+// Prints open end up; the taper is under 45° so it needs no supports.
 module cap() {
-    tot = cap_h;
-    r_fb = s_bore_flange/2;                 // flange bore radius
+    tot  = cap_h;
+    r_fb = s_bore_flange/2;                  // flange bore radius
+    r_lo = s_bore_body/2 + cap_wall;         // around the sensor body
+    r_mi = r_fb + cap_wall;                  // around the flange
+    z_c1 = z_sh + sensor_h;                  // full width from here up (plug headroom + thread)
+    z_c0 = z_c1 - (od/2 - r_mi) * 1.2;       // taper start (~40° from vertical)
     difference() {
-        if (cap_style == "diverter") cap_shell_diverter(tot); else cap_shell_open(tot);
-        // ---- sensor seat (both styles) ----
-        // upper body bore (locates the sensor), then flange bore
-        // body bore; the flat step up to the flange bore is the seat for the flange
-        translate([0, 0, z_sh - eps]) cylinder(d = s_bore_body, h = s_body_h + 2*eps);
+        rotate_extrude($fn = 128) polygon([
+            [0, 0], [r_lo - 0.6, 0], [r_lo, 0.6],
+            [r_lo, z_flange0 - (r_mi - r_lo) - 0.1], [r_mi, z_flange0 - 0.1],
+            [r_mi, z_c0], [od/2, z_c1], [od/2, tot], [0, tot]]);
+        // floor hole: the O-ring seals here
+        translate([0, 0, -eps]) cylinder(d = oring_bore, h = z_sh + 2*eps);
+        translate([0, 0, z_sh - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
+        // sensor body bore, then flange bore up to the back of the sensor
+        translate([0, 0, z_sh]) cylinder(d = s_bore_body, h = s_body_h + eps);
         translate([0, 0, z_flange0]) cylinder(d = 2*r_fb, h = sensor_h - s_body_h + eps);
         // Molex plug headroom
-        translate([0, 0, z_sh + sensor_h - eps]) cylinder(d = th_major - 2*th_depth + 2*th_clear - 0.2, h = cav_above + 2*eps);
-
-        // room for the retainer collar above the flange
-        translate([0, 0, z_flange1 - eps]) cylinder(d = 2*ret_r1 + 0.8, h = sensor_h - s_body_h - s_flange_h + 2*eps);
+        translate([0, 0, z_c1 - eps]) cylinder(d = th_major - 2*th_depth + 2*th_clear - 0.2, h = cav_above + 2*eps);
 
         // ---- body thread (female, 4-start) ----
         translate([0, 0, tot - th_len])
@@ -383,55 +364,9 @@ module cap() {
         // relief below the thread: room for the spigot so the cap seats on the shoulder
         translate([0, 0, tot - th_len - th_relief]) cylinder(d = th_major + 2*th_clear + 0.4, h = th_relief + eps);
 
-        // grip flutes
-        z_fl = cap_style == "diverter" ? z_sh + 6 : 2;
+        // grip flutes on the full-width band
         for (i = [0 : 17]) rotate([0, 0, i * 20])
-            translate([od/2 + 0.6, 0, z_fl]) cylinder(d = 2.4, h = tot - th_len - z_fl - 1, $fn = 16);
-    }
-}
-
-// open style: plain cylinder, open at the bottom; the flange sits on the
-// step between the body bore and the flange bore
-module cap_shell_open(tot) {
-    difference() {
-        cylinder(d = od, h = tot);
-        translate([0, 0, -eps]) difference() {
-            cylinder(d = od + 1, h = 0.8);
-            cylinder(d1 = od - 1.6, d2 = od, h = 0.8 + eps);
-        }
-    }
-}
-
-// diverter style: nose barrel with the gas path, O-ring sealing bore
-module cap_shell_diverter(tot) {
-    difference() {
-        union() {
-            cylinder(d = nose_od, h = z_sh - 4 + eps);                         // nose barrel
-            translate([0, 0, z_sh - 4]) cylinder(d1 = nose_od, d2 = od, h = (od - nose_od)/2);  // 45° shoulder
-            translate([0, 0, z_sh - 4 + (od - nose_od)/2 - eps]) cylinder(d = od, h = tot - (z_sh - 4 + (od - nose_od)/2) + eps);
-            // DIN cone + yoke face
-            translate([0, 0, nose_face_h]) cylinder(d1 = face_d, d2 = cone_d, h = cone_h + eps);
-            cylinder(d = face_d, h = nose_face_h + eps);
-        }
-        // trim the barrel under the cone back to the cone
-        translate([0, 0, -eps]) difference() {
-            cylinder(d = nose_od + 2, h = z_ch0);
-            translate([0, 0, nose_face_h]) cylinder(d1 = face_d, d2 = cone_d, h = cone_h + 2*eps);
-            cylinder(d = face_d, h = nose_face_h + 2*eps);
-        }
-
-        // ---- gas path ----
-        translate([0, 0, -eps]) cylinder(d = inlet_d, h = z_ch0 + 2*eps, $fn = 24);
-        translate([0, 0, -eps]) cylinder(d1 = 4.0, d2 = inlet_d, h = 1.2, $fn = 32);   // centring countersink
-        translate([0, 0, z_ch0]) cylinder(d = chamber_d, h = chamber_h + eps);
-        for (i = [0 : vent_n - 1]) rotate([0, 0, i * 360 / vent_n + 30])
-            translate([chamber_d/2 - 1.5, 0, z_ch0 + chamber_h/2]) teardrop_x(vent_d, nose_od);
-
-        // clearance for the M16 nose (sensor face sits 1.2 above the chamber ledge)
-        translate([0, 0, z_ch0 + 0.8]) cylinder(d = s_thread_d + 0.8, h = z_sh - z_ch0 - 0.8 + eps);
-        // O-ring sealing bore (seals the chamber off from the electronics)
-        translate([0, 0, z_sh - oring_zone]) cylinder(d = oring_bore, h = oring_zone + eps);
-        translate([0, 0, z_sh - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
+            translate([od/2 + 0.6, 0, z_c1 + 0.6]) cylinder(d = 2.4, h = tot - z_c1, $fn = 16);
     }
 }
 
@@ -443,57 +378,28 @@ module teardrop_x(d, len) {
     }
 }
 
-/* ========================= SENSOR RETAINER ============================ */
-// A collar that sits on the outer edge of the sensor flange. Its 8 spring
-// petals are pressed down by the end of the body's spigot when the cap is
-// screwed on, clamping the flange onto its seat in the cap. Exported
-// petals-down; print as-is in PETG (or TPU), no supports.
-ret_r0   = ret_id/2;
-ret_r1   = s_bore_flange/2 + 0.2;            // tube OD
-ret_lip0 = s_flange_d/2 - 0.65;              // contact lip: touches the flange's edge
-ret_lip1 = s_flange_d/2 + 0.15;
-ret_z0   = z_flange1 + s_taper_h * (s_flange_d/2 - ret_lip0) / (s_flange_d/2 - s_boss_d/2) + 0.05;   // lip rests on the flange's taper (cap coords)
-ret_z1   = cap_h - th_len + ret_preload;     // petal top = spigot end + preload
-ret_petal_od = th_major - 2*th_depth + 2*th_clear - 0.8;
-
-module retainer() {
-    difference() {
-        union() {
-            translate([0, 0, ret_z0]) cylinder(r = ret_lip1, h = 1.0 + eps);                       // lip
-            translate([0, 0, ret_z0 + 1.0]) cylinder(r = ret_r1, h = ret_z1 - ret_z0 - 1.0);      // tube
-            translate([0, 0, ret_z1 - ret_petal_t]) cylinder(d = ret_petal_od, h = ret_petal_t);   // petal disc
-        }
-        translate([0, 0, ret_z0 - 1]) cylinder(r = ret_lip0, h = 2.0 + eps);
-        translate([0, 0, ret_z0 + 1.0 - eps]) cylinder(r = ret_r0, h = ret_z1 - ret_z0);
-        // 8 slots split the disc into spring petals
-        for (i = [0 : 7]) rotate([0, 0, i * 45 + 22.5])
-            translate([ret_r1 - 0.3, -0.7, ret_z1 - ret_petal_t - 1]) cube([12, 1.4, ret_petal_t + 2]);
-        // wire notch so the sensor leads can lie flat
-        translate([-2.5, ret_r0 - 1, ret_z1 - 3]) cube([5, 4, 4]);
-    }
-}
-
 /* ===================== FIT TEST (print first) ======================== */
-// Display seat ring, sensor seat (O-ring bore + upper-body bore),
-// flange ring, and 4 mm of the mating thread.  ~20 min of printing.
+// Display seat ring, sensor seat (cap floor + body bore), flange ring, and
+// 4 mm of the body/cap thread.
 module fit_test() {
     difference() {          // display seat: drop the board in, tab into its pocket
         cylinder(d = 2*pcb_tab_r + 4, h = 2);
         translate([0, 0, -eps]) cylinder(d = disp_bore, h = 3);
         translate([0, 0, -eps]) linear_extrude(3) pcb_tab_2d(fit);
     }
-    // sensor seat: body bore with the flange step on top (open cap seats here)
+    // sensor seat: the cap floor (O-ring hole) with the body bore above it.
+    // The sensor should sit on the floor with its O-ring snug in the hole,
+    // and the diverter should screw on underneath and clamp it.
     translate([52, 0, 0]) difference() {
-        cylinder(d = s_bore_flange + 4, h = 6);
-        translate([0, 0, -eps]) cylinder(d = s_bore_body, h = 3 + 2*eps);
-        translate([0, 0, 3]) cylinder(d = s_bore_flange, h = 4);
+        cylinder(d = s_bore_body + 2*cap_wall, h = z_sh + 3);
+        translate([0, 0, -eps]) cylinder(d = oring_bore, h = z_sh + 2*eps);
+        translate([0, 0, z_sh - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
+        translate([0, 0, z_sh]) cylinder(d = s_bore_body, h = 4);
     }
-    // O-ring sealing bore (built-in-diverter cap)
+    // flange bore ring
     translate([90, 0, 0]) difference() {
-        cylinder(d = oring_bore + 5, h = oring_zone + 1);
-        translate([0, 0, -eps]) cylinder(d = s_thread_d + 0.8, h = 2);
-        translate([0, 0, 1]) cylinder(d = oring_bore, h = oring_zone + eps);
-        translate([0, 0, oring_zone + 0.7]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
+        cylinder(d = s_bore_flange + 2*cap_wall, h = 2);
+        translate([0, 0, -eps]) cylinder(d = s_bore_flange, h = 3);
     }
     translate([0, 54, 0]) intersection() { body(); cylinder(d = od + 1, h = 4); }
     translate([54, 54, 0]) difference() {
@@ -532,8 +438,7 @@ module assembly(explode = 0) {
     translate([0, 0, z_cap_in_body - explode * 2]) {
         color("#e0e0e0") cap();
         translate([0, 0, z_sh + explode * 1.2]) dummy_sensor();
-        color("#d08030") translate([0, 0, explode * 1.6]) retainer();
-        if (cap_style == "open" && show_diverter)
+        if (show_diverter)
             color("#1f9e8f") translate([0, 0, -div_len - explode * 1.4]) diverter();
     }
 }
@@ -544,5 +449,4 @@ else if (PART == "section")    difference() { assembly(0); translate([-60, 0, -8
 else if (PART == "body")       body();
 else if (PART == "bezel")      translate([0, 0, rim_h + bezel_plate]) rotate([180, 0, 0]) bezel();
 else if (PART == "cap")        cap();
-else if (PART == "retainer")   translate([0, 0, ret_z1]) rotate([180, 0, 0]) retainer();
 else if (PART == "fit_test")   fit_test();

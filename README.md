@@ -1,12 +1,6 @@
 # Compact O2 Analyzer — ESP32-2424S012 + ADS1115 + R-22D
 
-A Ø46 mm handheld analyzer made from **4 printed parts and no screws**: bezel, body, cap and a small sensor retainer collar. The round display sits on top. The cap unscrews in under one turn to give access to both the sensor and the battery.
-
-**Choose your cap.** Both use the same body, bezel, retainer and thread:
-| Cap | Length | Best for |
-|---|---|---|
-| `stl/cap_open.stl` | 65.9 mm + 6.6 mm sensor nose; 81.3 mm with `stl/diverter.stl` screwed on | Using the screw-on diverter, or any standard M16×1 T-piece or inflator adapter. Bare-sensor air calibration responds in seconds. |
-| `stl/cap_diverter.stl` | 80.1 mm, diverter built in | The shortest unit with nothing extra to carry or lose. The sensor nose is sealed inside the cap. |
+A Ø46 mm handheld analyzer made from **4 printed parts and no screws**: bezel, body, cap and diverter. The round display sits on top. The cap unscrews in under one turn to give access to both the sensor and the battery. It's 67.7 mm long plus the sensor's 4.8 mm threaded nose, or 81.3 mm with the diverter on.
 
 ```
    ┌──────── BEZEL ────────┐   screws onto the rim, holds the display glass
@@ -17,11 +11,11 @@ A Ø46 mm handheld analyzer made from **4 printed parts and no screws**: bezel, 
    └── 4-start spigot ──────┘
    ┌──────── CAP ──────────┐   < 1 turn off → battery + sensor accessible
    │   Molex headroom       │
-   │   retainer collar      │   clamped by the body: sensor can't push up
-   │   R-22D sensor         │   sits on its flange
-   └──┬── M16×1 nose ───┬───┘   open cap: nose + O-ring exposed
-      │  DIVERTER       │       screw-on (optional), or built into
-      └ DIN cone / yoke ┘       cap_diverter.stl
+    \    R-22D sensor     /    cap tapers to follow the sensor
+     │                  │
+     └── floor + O-ring ┘       sensor shoulder sits on the floor; O-ring seals in its hole
+       │  DIVERTER    │         screws onto the sensor nose and clamps the floor
+       └ DIN cone/yoke┘         Ø1.6 mm restrictor inlet
 ```
 
 ## Files
@@ -29,13 +23,10 @@ A Ø46 mm handheld analyzer made from **4 printed parts and no screws**: bezel, 
 |---|---|
 | `o2_analyzer.scad` | Fully parametric model (OpenSCAD). Every dimension is at the top. |
 | `stl/body.stl` | Main body. Print upright (spigot down), no supports. |
-| `stl/cap_open.stl` | Open cap: the sensor nose and O-ring stick out. Print open-end up, no supports. |
-| `stl/cap_diverter.stl` | Cap with the diverter built in. Print nose-down, as exported, no supports. |
-| `diverter.scad` → `stl/diverter.stl` | Screw-on diverter for the open cap. Print nose-down, no supports. |
-| `stl/diverter_push.stl` | Optional thread-free version that the sensor's O-ring holds on. |
+| `stl/cap.stl` | Cap. The sensor sits on its floor. Print open-end up, as exported, no supports (the taper is under 45°). |
+| `diverter.scad` → `stl/diverter.stl` | Screw-on diverter. It also holds the sensor in. Print nose-down, no supports. |
 | `stl/bezel.stl` | Screw-on display bezel. Already flipped face-down for printing. |
-| `stl/retainer.stl` | Sensor retainer collar. Exported petals-down; print as-is in PETG or TPU, no supports. |
-| `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (O-ring bore and upper-body bore), flange ring, and a 4 mm thread pair. |
+| `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (the cap floor with its O-ring hole, plus the body bore), flange ring, and a 4 mm thread pair. |
 | `step/*.step` | The same parts as STEP solids for Fusion 360 or SolidWorks (see CAD files below). |
 | `firmware/O2_Analyzer/O2_Analyzer.ino` | Arduino sketch. |
 
@@ -46,7 +37,7 @@ The sensor profile is measured from a real PSR-11-39-MD:
 - A Ø26 × 15.75 mm body.
 - A Ø28.5 × 8.5 mm flange. AII's drawing says Ø29.3 (1.154"), so other makes may differ.
 
-Other R-22D-type sensors may differ slightly, so check them against yours. Only the rear taper and boss (marked `*`) are still estimates. `s_body_h` and `s_flange_h` decide where the flange seat and the retainer sit, so they matter most. If you change the nose values, change them in `diverter.scad` too.
+Other R-22D-type sensors may differ slightly, so check them against yours. Only the rear taper and boss (marked `*`) are still estimates. `s_nose_h` and the O-ring size set how much thread the diverter grips, so they matter most. If you change the nose values or `cap_floor_t`, change them in `diverter.scad` too.
 - `plug_clear` — the space behind the sensor for the Molex plug and its wire bend (11 mm).
 - `pcb_d`, `pcb_tab_w`, `pcb_tab_r`: the board outline, a 37 mm circle plus a 14.23 mm tab at the USB-C end, 38.5 mm overall, from the board's spec drawing.
 - `glass_d`, `glass_stack`, `comp_h` — display glass diameter, glass-to-PCB height, and the tallest component under the PCB.
@@ -54,7 +45,7 @@ Other R-22D-type sensors may differ slightly, so check them against yours. Only 
 - `batt_*` — the battery size. The default is a 602030 (6×20×30 mm, ≈300 mAh). The pocket must fit inside `spigot_id` (37 mm), which allows a diagonal of up to ~36.5 mm.
 - `ads_zone` — 3.8 mm for the ADS1115 with its wires soldered flat. Raise it if your wiring stands taller.
 
-Export a part with: `openscad -D 'PART="body"' -o body.stl o2_analyzer.scad` (also `cap`, `bezel`, `retainer`, `fit_test`, `assembly`, `exploded`, `section`). Choose the cap version with `cap_style`: `openscad -D 'cap_style="diverter"' -D 'PART="cap"' -o cap_diverter.stl o2_analyzer.scad`. The default is `"open"`.
+Export a part with: `openscad -D 'PART="body"' -o body.stl o2_analyzer.scad` (also `cap`, `bezel`, `fit_test`, `assembly`, `exploded`, `section`). Export the diverter with `openscad -o diverter.stl diverter.scad`.
 
 Print in PETG or ASA with 0.2 mm layers and 4 perimeters, because the threads need them. The body/cap thread is 4-start: 2 mm between ridges, 8 mm advance per turn, and 0.4 mm clearance.
 
@@ -66,16 +57,15 @@ The body prints spigot-down, so its thread starts on the build plate. Turn on yo
 | Battery latches | `latch_hook` (1.0) | 0.8 | 1.2 |
 | Body/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
-| O-ring seal (built-in cap, diverter) | `oring_squeeze` (0.2) | 0.15 | 0.25 |
-| Sensor retainer clamp | `ret_preload` (0.5) | 0.3 (cap hard to close) | 0.8 (sensor still moves) |
+| O-ring seal in the cap floor | `oring_squeeze` (0.2) | 0.15 | 0.25 |
 | Bezel thread | `bz_clear` (0.30) | 0.4 | 0.2 |
-| Power button | `btn_reach` (19.8) | — | lower it, e.g. 19.5, if a press doesn't click the switch |
+| Power button | `btn_reach` (19.4) | — | lower it, e.g. 19.5, if a press doesn't click the switch |
 
 ## Bill of materials
 - ESP32-2424S012 (C or N version), taken out of its stock case
 - ADS1115 breakout (Adafruit or clone), **without** pin headers
 - R-22D type sensor with a 3-pin Molex: PSR-11-39-MD, AST-22D, or Divesoft R-22S
-- A Molex mating pigtail for the sensor (sold as an "R-22 sensor cable" or a Molex KK 2.54 3-pin housing). Silicone-insulated wire is best: it flexes the most as the cap turns.
+- A Molex mating pigtail for the sensor (sold as an "R-22 sensor cable" or a Molex KK 2.54 3-pin housing). Silicone-insulated wire is best, because it flexes the most as the cap turns.
 - A 1S LiPo, 602030 or similar, with a JST-1.25 2-pin plug
 - A short JST-1.25 2-pin extension (male/female). The battery-side plug then sits in the battery bay, so you can swap the battery without opening the top.
 - A JST-SH 1.0 mm 4-pin pigtail for the board's UART port
@@ -104,14 +94,11 @@ The board's on/off button drives its IP5306 power chip. Press once to turn on; d
 2. Plug the JST-SH pigtail and the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The power button lines up with the flexible tab in the wall.
 3. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. Snug by hand is enough. There's a gap in the rim's thread at the USB-C end, where the display's tab passes through; that's normal.
 4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
-5. Plug the Molex into the back of the sensor. Drop the sensor nose-first into the cap so its flange rests on the seat. Then drop the **retainer collar** over the plug, petals up, so its lip sits on the edge of the flange.
-   - **Open cap:** the sensor rests on its flange, with the shoulder flush with the cap's bottom face. The whole threaded nose and the O-ring stick out.
-   - **Built-in cap:** the sensor rests on its shoulder, and the O-ring seals in the bore just below, so gas from the diverter can't reach the electronics.
-6. Screw the cap on. It takes a little under one turn.
+5. Plug the Molex into the back of the sensor. Drop the sensor nose-first into the cap so its shoulder sits on the floor and the O-ring presses into the floor hole. The threaded nose sticks out underneath.
+6. Screw the cap onto the body. It takes a little under one turn.
+7. Screw the diverter onto the sensor nose until it's snug against the cap floor. Hand-tight is enough. It works like a nut: the cap floor is clamped between the sensor's shoulder and the diverter, so pressing the analyzer against a valve can't push the sensor up.
 
-When you screw the cap on, the end of the body presses the retainer's petals down about 0.5 mm. That clamps the sensor onto its seat, so pressing the analyzer against a valve can't push the sensor up.
-
-To change the sensor, unscrew the cap, lift the retainer off and pull the sensor out.
+To change the sensor, unscrew the diverter and the cap, then lift the sensor out.
 
 **Power button:** press the flat recess on the side of the body. The tab flexes inward and its nub presses the board's button.
 
@@ -136,9 +123,7 @@ Calibration is saved in flash. Recalibrate before each use, as you would with an
 The pin map at the top of the sketch is the commonly published one for this board. If the screen stays dark, check `PIN_TFT_*` first.
 
 ## Diverter: analyzing a cylinder
-The diverter is either the screw-on part on the open cap, or the bottom of `cap_diverter.stl`. Both work the same way.
-
-**Separate diverter (open cap):** slip it over the sensor's O-ring and thread it onto the M16×1 nose until its rear face stops against the sensor's shoulder. That's about 5 turns. Its counterbore seals on the O-ring. `stl/diverter_push.stl` (`mount = "push"`) is an optional thread-free version that the O-ring alone holds on.
+The diverter screws onto the sensor's M16×1 nose. Its thread starts right at its rear face, so it grips all of the exposed thread, about 5 turns. The sensor's O-ring seals in the cap floor, which keeps gas away from the electronics even with the diverter off, and the diverter's rear face tightens flat against the floor.
 
 Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small chamber over the sensor face, and exits through 6 side vents. The vents have 11–14× the inlet's area, so the sensor stays at roughly ambient pressure and the reading isn't pushed high. The vents sit just behind the cone, so they stay outside the valve.
 
@@ -147,7 +132,7 @@ Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small cha
 - **DIN valve:** the cone seats in the mouth of the DIN socket.
 
 **Steps:**
-1. Calibrate in air first. With the diverter on, air reaches the sensor through the vents by diffusion, so give it about a minute to settle. With the open cap you can also calibrate with the diverter off, which responds in seconds. Wait for STABLE, then long-press to calibrate.
+1. Calibrate in air first. With the diverter on, air reaches the sensor through the vents by diffusion, so give it about a minute to settle. Or calibrate with the diverter off, which responds in seconds, but screw it back on before you measure, because it's what holds the sensor in. Wait for STABLE, then long-press to calibrate.
 2. Hold the analyzer firmly against the valve outlet, then crack the valve **just** enough to hear a gentle hiss. You want roughly 1–2 L/min; the sensor is rated for 0.5–2 SCFH. Don't open it further.
 3. Wait for STABLE (about 10–20 s), then read the value.
 4. Close the valve **before** pulling the analyzer away.
@@ -155,11 +140,11 @@ Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small cha
 
 A higher flow doesn't give a more accurate reading. It builds pressure at the sensor face and reads high. If the reading creeps up as you open the valve more, you're over-flowing.
 
-If the flow is hard to control on your valves, change the inlet with `inlet_d` (in `diverter.scad` or `o2_analyzer.scad`). Use about 1.2 for a gentler flow, or 2.0 if the reading responds too slowly.
+If the flow is hard to control on your valves, change the inlet with `inlet_d` in `diverter.scad`. Use about 1.2 for a gentler flow, or 2.0 if the reading responds too slowly.
 
 ## CAD files (STEP) for Fusion 360, SolidWorks, Onshape
 
-> **Out of date:** the STEP files and `cad/o2_analyzer_cq.py` were made from an earlier version, before the sensor was measured, the screw-on bezel and the retainer collar. They need regenerating before you use them for anything dimensional. The STLs in `stl/` are current.
+> **Out of date:** the STEP files and `cad/o2_analyzer_cq.py` were made from an earlier version, before the sensor was measured, before the screw-on bezel, and before the cap floor that the diverter clamps. They need regenerating before you use them for anything dimensional. The STLs in `stl/` are current.
 The `step/` folder has every printed part as a true solid, with exact cylinders, faces and fully modeled threads. Open them with **File → Open** in Fusion 360 or SolidWorks. You can sketch on faces, fillet, cut and measure, then save in that program's own format.
 
 | File | Part | Origin (z = 0) |

@@ -1,8 +1,9 @@
 // =====================================================================
 //  Cylinder flow diverter for the O2 analyzer (R-22D / PSR-11-39-MD)
 //
-//  Slides (or screws) onto the sensor's M16x1 nose, seals on the sensor O-ring, and
-//  is held against the cylinder valve outlet:
+//  Screws onto the sensor's M16x1 nose like a nut: its rear face tightens
+//  against the cap's floor, clamping the sensor in the cap. (The sensor's
+//  O-ring seals in the cap floor.) It is held against the cylinder valve:
 //    * YOKE valve : flat front face presses on the valve's outlet O-ring
 //    * DIN valve  : the cone seats in the mouth of the DIN socket
 //  Gas -> Ø1.6 restrictor -> chamber over the sensor face -> 6 side vents.
@@ -10,7 +11,7 @@
 //
 //  Export:  openscad -o diverter.stl diverter.scad
 //  Print nose-down (as exported), PETG or TPU 95A, 0.12–0.16 mm layers.
-//  Slip it over the O-ring and thread it on until it stops against the cap.
+//  Thread it on until it's snug against the cap. Hand-tight is enough.
 // =====================================================================
 
 /* ---- sensor nose (keep in sync with o2_analyzer.scad) ---- */
@@ -19,19 +20,12 @@ s_thread_p   = 1.0;
 s_nose_h     = 6.59;      // threaded section: shoulder -> tip (measured)
 s_oring_d    = 18.0;      // O-ring OD as installed, at the base of the thread (measured)
 s_oring_cs   = 1.7;       // O-ring thickness (measured)
-oring_zone   = s_oring_cs + 0.3;   // O-ring band behind the thread
+cap_floor_t  = 1.8;       // cap floor under the sensor shoulder (o2_analyzer.scad)
 
 /* ---- diverter ---- */
-// How it attaches to the sensor nose:
-//   "thread" - screws onto the M16x1 nose (default; prints cleanly as-is)
-//   "push"   - smooth bore; the sensor's O-ring grips and seals it
-mount        = "thread";
-neck_margin  = 0;         // extra room behind the O-ring bore (pushes the thread deeper)
 od           = 26.0;
 th_clear     = 0.20;      // radial
 th_depth     = 0.60;
-oring_squeeze = 0.2;      // radial squeeze on the O-ring (~12%)
-oring_bore   = s_oring_d - 2*oring_squeeze;
 chamber_d    = 15.0;
 chamber_h    = 2.6;       // gas space in front of the sensor face
 inlet_d      = 1.6;       // restrictor orifice
@@ -48,8 +42,7 @@ eps = 0.01;
 // derived (z = 0 at the nose face, increasing toward the analyzer)
 z_ch0   = nose_h + cone_h;                    // chamber floor
 z_th0   = z_ch0 + chamber_h;                  // thread start (sensor face)
-z_top   = z_th0 + 0.6 + s_nose_h + neck_margin;  // rear face seats on the sensor shoulder
-z_th1   = z_top - oring_zone - neck_margin;      // thread ends where the O-ring bore begins
+z_top   = z_th0 + 0.6 + s_nose_h - cap_floor_t;  // rear face clamps the cap floor
 
 echo(str("Diverter length: ", z_top, " mm   inlet area ", PI*inlet_d*inlet_d/4,
          " mm²   vent area ", vent_n*PI*vent_d*vent_d/4, " mm²"));
@@ -90,19 +83,10 @@ module diverter() {
         translate([0, 0, -eps]) cylinder(d1 = 4.0, d2 = inlet_d, h = 1.2, $fn = 32);
         // chamber
         translate([0, 0, z_ch0]) cylinder(d = chamber_d, h = chamber_h + eps);
-        if (mount == "thread") {
-            // female M16x1 (helical groove = thread_solid with the male major dia + clearance)
-            translate([0, 0, z_th0])
-                thread_solid(s_thread_d/2 - th_depth + th_clear, th_depth, z_th1 - z_th0, s_thread_p);
-        } else {
-            // smooth clearance bore around the sensor thread
-            translate([0, 0, z_th0 - eps]) cylinder(d = s_thread_d + 0.8, h = z_th1 - z_th0 + 2*eps);
-            translate([0, 0, z_th1 - 1.2]) cylinder(d1 = s_thread_d + 0.8, d2 = s_thread_d + 1.8, h = 1.2 + eps);
-        }
-        // neck clearance (absorbs neck-length tolerance), then the O-ring sealing bore + lead-in
-        if (neck_margin > 0) translate([0, 0, z_th1 - eps]) cylinder(d = s_thread_d + 1.8, h = neck_margin + 2 * eps);
-        translate([0, 0, z_th1 + neck_margin - eps]) cylinder(d = oring_bore, h = z_top - z_th1 - neck_margin + 2 * eps);
-        translate([0, 0, z_top - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
+        // female M16x1, full length to the rear face (all the exposed thread engages)
+        translate([0, 0, z_th0])
+            thread_solid(s_thread_d/2 - th_depth + th_clear, th_depth, z_top - z_th0 + eps, s_thread_p);
+        translate([0, 0, z_top - 0.4]) cylinder(d1 = s_thread_d - 2*th_depth + 2*th_clear, d2 = s_thread_d + 0.8, h = 0.4 + eps);   // thread start
         // radial side vents from the chamber (exit just behind the cone, outside the valve)
         for (i = [0 : vent_n - 1]) rotate([0, 0, i * 360 / vent_n + 30])
             translate([0, 0, z_ch0 + chamber_h / 2]) 

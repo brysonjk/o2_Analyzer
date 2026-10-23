@@ -98,6 +98,22 @@ bay_depth      = 0.55;   // slot depth into the rim
 bay_twist      = 30;     // degrees of turn from entry to locked
 bay_lock       = 0.05;   // ramp interference at the locked end (clamps the bezel)
 
+// What stops the bezel untwisting (the body supports both; pick the bezel):
+//   "detent" - a sprung strip in the rim clicks a ridge into a notch in the
+//              bezel at the locked position. No hardware. (default)
+//   "screw"  - also adds a boss for one M2 x 4 pan-head self-tapping screw
+//              whose tip pins the bezel to the rim.
+// CLI:  openscad -D 'bezel_lock="screw"' -D 'PART="bezel"' -o bezel_screw.stl o2_analyzer.scad
+bezel_lock     = "detent";
+det_a0         = 28;     // detent strip: fixed end angle (deg, in the solid rim between slots)
+det_a1         = 58;     // free end angle
+det_bump_a     = 52;     // ridge angle on the strip
+det_bump       = 0.6;    // ridge height above the rim surface (0.3 mm rides on the skirt)
+det_slot       = 0.45;   // slot width around the strip
+pin_a          = 18;     // screw pin hole angle in the rim (locked position)
+pin_d          = 2.2;    // hole for the screw tip in the rim
+pin_pilot      = 1.6;    // self-tapping pilot for M2 in the bezel boss
+
 // body <-> cap thread: 4-start, so the cap closes in < 1 turn and the
 // sensor wires barely twist
 th_pitch       = 2.0;    // axial spacing between thread ridges
@@ -244,6 +260,13 @@ module body() {
         // twist-lock slots in the rim for the bezel lugs
         for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n]) bayonet_slot();
 
+        // detent strips: U-shaped slots free a strip of the rim so it can flex
+        for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n]) detent_cut();
+
+        // hole for the bezel screw's tip (only used with the screw bezel)
+        rotate([0, 0, pin_a]) translate([disp_bore/2 + 0.5, 0, z_pin]) rotate([0, 90, 0])
+            cylinder(d = pin_d, h = 5, $fn = 24);
+
         // thread relief at the shoulder: the cap's top turn can run fully home
         translate([0, 0, th_len - 0.8]) difference() {
             cylinder(d = th_major + 2, h = 0.8 + eps);
@@ -256,6 +279,9 @@ module body() {
 
     // flexure button nub
     rotate([0, 0, btn_angle]) button_nub();
+
+    // detent ridges on the strips
+    for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n]) detent_bump();
 
     // PCB support pads in the cavity (3 pads, skip USB + button sectors)
     for (a = [usb_angle + 120, usb_angle + 240, usb_angle + 60])
@@ -271,6 +297,27 @@ module body() {
 module sector(r0, r1, a0, a1, z0, z1) {
     translate([0, 0, z0]) rotate([0, 0, a0])
         rotate_extrude(angle = a1 - a0, $fn = 192) translate([r0, 0]) square([r1 - r0, z1 - z0]);
+}
+
+// ---- bezel detent / pin ----
+z_det0 = z_rim0 + 0.35;          // strip bottom
+z_det1 = z_rim0 + 2.2;           // strip top
+z_pin  = z_rim0 + 2.6;           // screw axis height
+det_sd = det_slot / (2 * PI * rim_od/2) * 360;    // slot width in degrees
+
+module detent_cut() {
+    r0 = disp_bore/2 - 0.5;  r1 = rim_od/2 + 0.6;
+    sector(r0, r1, det_a0, det_a1 + det_sd, z_det0 - det_slot, z_det0);        // below the strip
+    sector(r0, r1, det_a0, det_a1 + det_sd, z_det1, z_det1 + det_slot);        // above the strip
+    sector(r0, r1, det_a1, det_a1 + det_sd, z_det0 - det_slot, z_det1 + det_slot);   // free end
+}
+
+module detent_bump() {
+    rc = rim_od/2 + det_bump - 0.7;                 // ridge = r 0.7 rod, its outer edge det_bump proud
+    rotate([0, 0, det_bump_a]) translate([rc, 0, z_det0 + 0.15]) {
+        cylinder(r = 0.7, h = z_det1 - z_det0 - 0.9, $fn = 24);
+        translate([0, 0, z_det1 - z_det0 - 0.9 - eps]) cylinder(r1 = 0.7, r2 = 0.15, h = 0.6, $fn = 24);   // lead-in for the skirt
+    }
 }
 
 // L-slot: vertical entry from the rim top, then a ramped run clockwise
@@ -355,6 +402,15 @@ module bezel() {
         translate([0, 0, skirt_h + bezel_plate - 0.8]) cylinder(d1 = view_d, d2 = view_d + 1.6, h = 0.8 + eps);
         // glass recess (glass sits 0.4 into the plate, so it can't shift)
         translate([0, 0, skirt_h - eps]) cylinder(d = glass_d + 0.5, h = 0.4 + eps);
+        // detent notches: the rim ridge drops in here at the locked position
+        for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n + det_bump_a + bay_twist])
+            sector(skirt_id/2 - 0.1, skirt_id/2 + det_bump - 0.1, -2.4, 2.4, -eps, z_det1 - z_rim0 + 0.3);
+        // lead-in chamfer on the skirt's inner lower edge (rides over the ridges)
+        translate([0, 0, -eps]) cylinder(d1 = skirt_id + 0.8, d2 = skirt_id, h = 0.4);
+        // screw: pilot through the boss and skirt
+        if (bezel_lock == "screw")
+            rotate([0, 0, pin_a + bay_twist]) translate([skirt_id/2 - 1, 0, z_pin - z_rim0]) rotate([0, 90, 0])
+                cylinder(d = pin_pilot, h = 10, $fn = 16);
         // lug index notches on the skirt's lower edge
         for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n])
             translate([od/2, 0, -eps]) rotate([0, 0, 45]) cube([1.2, 1.2, 1.0], center = true);
@@ -366,6 +422,12 @@ module bezel() {
     for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n])
         sector(skirt_id/2 - bay_lug_depth, skirt_id/2 + 0.2, -bay_lug_w/2, bay_lug_w/2,
                bay_lug_z, bay_lug_z + bay_lug_h);
+    // screw boss (M2 x 4 pan head: 2.6 mm of thread, tip 1 mm into the rim)
+    if (bezel_lock == "screw")
+        rotate([0, 0, pin_a + bay_twist]) difference() {
+            sector(od/2 - 0.2, od/2 + 1.6, -6, 6, 0, skirt_h);
+            translate([skirt_id/2 - 1, 0, z_pin - z_rim0]) rotate([0, 90, 0]) cylinder(d = pin_pilot, h = 10, $fn = 16);
+        }
 }
 
 /* =============================== CAP ================================= */

@@ -32,7 +32,8 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 | `stl/cap_diverter.stl` | Cap with the diverter built in. Print nose-down, as exported, no supports. |
 | `diverter.scad` → `stl/diverter.stl` | Screw-on diverter for the open cap. Print nose-down, no supports. |
 | `stl/diverter_push.stl` | Optional thread-free version that the sensor's O-ring holds on. |
-| `stl/bezel.stl` | Twist-lock display bezel. Already flipped face-down for printing. |
+| `stl/bezel.stl` | Twist-lock display bezel with a click detent, no hardware. Already flipped face-down for printing. |
+| `stl/bezel_screw.stl` | The same bezel plus a boss for one M2 × 4 pan-head self-tapping screw that pins it. Print one or the other. |
 | `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (O-ring bore and upper-body bore), flange ring, and a 4 mm thread pair. |
 | `step/*.step` | The same parts as STEP solids for Fusion 360 or SolidWorks (see CAD files below). |
 | `firmware/O2_Analyzer/O2_Analyzer.ino` | Arduino sketch. |
@@ -65,6 +66,7 @@ The body prints spigot-down, so its thread starts on the build plate. Turn on yo
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.8) | +0.2 | −0.2 |
 | Sensor snap hooks | `hook_overlap` (0.75) / `hook_preload` (0.4) | `hook_overlap` 0.6 | `hook_preload` 0.6 |
 | Bezel twist-lock | `bay_lock` (0.05) | 0 | 0.10 |
+| Bezel click detent | `det_bump` (0.6) | 0.5 | 0.7 |
 | Power button | `btn_reach` (19.8) | — | lower it, e.g. 19.5, if a press doesn't click the switch |
 
 ## Bill of materials
@@ -98,7 +100,8 @@ The board's on/off button drives its IP5306 power chip. Press once to turn on; d
 ## Assembly
 1. Solder the wires to the ADS1115. Seat it in the floor recess with double-sided foam tape, then feed the sensor and battery leads down through the two floor holes. Leave the sensor leads about 3 cm longer than the straight run. The cap turns a little under one turn, and that slack takes up the twist.
 2. Plug the JST-SH pigtail and the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The power button lines up with the flexible tab in the wall.
-3. Fit the bezel: line up the three small notches on its lower edge with the three slots in the rim, press it down flat, then turn it clockwise about 30° until it stops. To remove it, turn it counter-clockwise and lift it off. Nothing has to flex, so it won't crack.
+3. Fit the bezel: line up the three small notches on its lower edge with the three slots in the rim, press it down flat, then turn it clockwise about 30° until it stops. It clicks at the end of the turn: a sprung strip in the rim drops a small ridge into a notch inside the bezel, so it won't untwist by itself. To remove it, turn it counter-clockwise firmly past the click and lift it off. The flexing happens in the rim strip, not the bezel, so the bezel won't crack.
+   - **Screw bezel (`bezel_screw.stl`):** after the click, drive one **M2 × 4 pan-head self-tapping screw** into the boss on the side of the bezel. Its tip drops into a hole in the rim and pins the bezel. Snug it gently, since it only needs to pin, not clamp. Take the screw out before you untwist the bezel.
 4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
 5. Plug the Molex into the back of the sensor. Push the sensor nose-first into the cap until the flange clicks under the three hooks.
    - **Open cap:** the sensor rests on its flange, with the shoulder flush with the cap's bottom face. The whole threaded nose and the O-ring stick out.

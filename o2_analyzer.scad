@@ -57,12 +57,12 @@ s_flange_d     = 28.5;   // widest flange (measured 3x; the AII drawing says 29.
 s_flange_h     = 8.5;
 s_taper_h      = 3.1;    // * (not measured) chamfer from the flange to the rear boss
 s_boss_d       = 14.7;   // * (not measured) rear boss, Molex recessed inside it
-s_oring_d      = 17.7;   // O-ring outside diameter
+s_oring_d      = 18.0;   // O-ring outside diameter as installed on the sensor (17.7 loose)
 s_oring_cs     = 1.7;    // O-ring thickness
 s_thread_d     = 16.0;   // M16 x 1
 plug_clear     = 11.0;   // space behind the boss face for the mating Molex plug + wire bend
 body_clear     = 0.5;    // radial room around the body (paper label, print tolerance)
-flange_clear   = 0.8;    // radial room around the flange (hooks need it to flex)
+flange_clear   = 0.4;    // radial room around the flange (printed holes shrink ~0.1-0.2)
 
 s_boss_h       = s_total_h - s_nose_h - s_body_h - s_flange_h - s_taper_h;   // rest of the length
 sensor_h       = s_body_h + s_flange_h + s_taper_h + s_boss_h;   // shoulder -> rear face (33.9)
@@ -136,7 +136,8 @@ nose_face_h    = 1.6;
 chamber_d      = 15.0;
 chamber_h      = 2.0;    // gas space in front of the sensor face
 nose_od        = 26.0;
-oring_bore     = s_oring_d - 0.5;   // radial squeeze ≈ 0.25 mm on the sensor O-ring
+oring_squeeze  = 0.2;    // radial squeeze on the O-ring (~12% of its 1.7 mm section)
+oring_bore     = s_oring_d - 2*oring_squeeze;
 
 // sensor snap hooks (in the cap wall)
 hook_n         = 3;
@@ -566,7 +567,7 @@ module dummy_sensor() {   // z = 0 at the shoulder
         translate([0, 0, sensor_h - s_boss_h - eps]) cylinder(d = s_boss_d, h = s_boss_h);
         translate([0, 0, -s_nose_h]) cylinder(d = s_thread_d, h = s_nose_h + eps);
     }
-    color("black") translate([0, 0, -s_oring_cs/2]) rotate_extrude() translate([(s_oring_d - s_oring_cs)/2, 0]) circle(d = s_oring_cs, $fn = 16);
+    color("black") translate([0, 0, -s_oring_cs/2 - 0.05]) rotate_extrude() translate([(s_oring_d - s_oring_cs)/2, 0]) circle(d = s_oring_cs, $fn = 16);
     color("white") translate([-4, -2.5, sensor_h]) cube([8, 5, 6]);       // mating plug
     color("red") for (x = [-2.5, 0, 2.5]) translate([x, 0, sensor_h + 6]) cylinder(d = 1.2, h = 3, $fn = 8);
 }

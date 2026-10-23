@@ -41,7 +41,7 @@ A Ø46 mm handheld analyzer made from **3 printed parts and no screws**. The rou
 ## ⚠️ Measure before you print
 The sensor profile is measured from a real PSR-11-39-MD:
 - 40.5 mm overall.
-- A 6.59 mm threaded nose, with the 17.7 × 1.7 mm O-ring at its base.
+- A 6.59 mm threaded nose, with the O-ring at its base (1.7 mm thick, 18.0 mm across when fitted).
 - A Ø26 × 15.75 mm body.
 - A Ø28.5 × 8.5 mm flange. AII's drawing says Ø29.3 (1.154"), so other makes may differ.
 
@@ -63,7 +63,8 @@ The body prints spigot-down, so its thread starts on the build plate. Turn on yo
 |---|---|---|---|
 | Battery latches | `latch_hook` (1.0) | 0.8 | 1.2 |
 | Body/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
-| Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.8) | +0.2 | −0.2 |
+| Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
+| O-ring seal (built-in cap, diverter) | `oring_squeeze` (0.2) | 0.15 | 0.25 |
 | Sensor snap hooks | `hook_overlap` (0.75) / `hook_preload` (0.4) | `hook_overlap` 0.6 | `hook_preload` 0.6 |
 | Bezel twist-lock | `bay_lock` (0.05) | 0 | 0.10 |
 | Bezel click detent | `det_bump` (0.6) | 0.5 | 0.7 |

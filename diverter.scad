@@ -17,7 +17,7 @@
 s_thread_d   = 16.0;
 s_thread_p   = 1.0;
 s_nose_h     = 6.59;      // threaded section: shoulder -> tip (measured)
-s_oring_d    = 17.7;      // O-ring OD, sits at the base of the thread (measured)
+s_oring_d    = 18.0;      // O-ring OD as installed, at the base of the thread (measured)
 s_oring_cs   = 1.7;       // O-ring thickness (measured)
 oring_zone   = s_oring_cs + 0.3;   // O-ring band behind the thread
 
@@ -30,7 +30,8 @@ neck_margin  = 0;         // extra room behind the O-ring bore (pushes the threa
 od           = 26.0;
 th_clear     = 0.20;      // radial
 th_depth     = 0.60;
-oring_bore   = s_oring_d - 0.5;   // radial squeeze ≈ 0.25 mm on the O-ring
+oring_squeeze = 0.2;      // radial squeeze on the O-ring (~12%)
+oring_bore   = s_oring_d - 2*oring_squeeze;
 chamber_d    = 15.0;
 chamber_h    = 2.6;       // gas space in front of the sensor face
 inlet_d      = 1.6;       // restrictor orifice

@@ -1,21 +1,23 @@
 // =====================================================================
 //  Compact O2 Analyzer  —  ESP32-2424S012 + ADS1115 + R-22D sensor
-//  Parametric OpenSCAD enclosure, 3 printed parts, no screws.  Units: mm.
+//  Parametric OpenSCAD enclosure, no screws.  Units: mm.
 //
-//    BEZEL : snaps over the body rim and holds the round display glass
-//    BODY  : display seat, flexure power button, ADS1115 bay, battery
-//            pocket with spring latches, 4-start threaded spigot
-//    CAP   : snap-in sensor seat + built-in flow diverter (restrictor,
-//            gas chamber, side vents, yoke face, DIN cone)
+//    BEZEL    : screws onto the threaded body rim, holds the display glass
+//    BODY     : display seat, flexure power button, ADS1115 bay, battery
+//               pocket with spring latches, 4-start threaded spigot
+//    CAP      : sensor seat; "open" (nose out, separate diverter) or with
+//               the flow diverter built in
+//    RETAINER : collar on the sensor flange, clamped by the body when the
+//               cap is screwed on, so the sensor can't push up
 //
 //  Unscrew the CAP (< 1 turn)  ->  pull the battery down out of its
-//  pocket; pull the sensor up out of its snap hooks.
+//  pocket; lift the retainer collar off and pull the sensor out.
 //
 //  Render one part:  set PART below, or from the CLI:
 //     openscad -D 'PART="body"' -o body.stl o2_analyzer.scad
 // =====================================================================
 
-PART = "assembly";   // assembly | exploded | section | body | cap | bezel | fit_test
+PART = "assembly";   // assembly | exploded | section | body | cap | bezel | retainer | fit_test
 
 // Cap style:
 //   "open"     - the sensor's M16x1 nose and O-ring stick out of the cap.
@@ -87,34 +89,13 @@ ads_zone       = 3.8;    // free height for ADS board + soldered wires
 od             = 46.0;
 fit            = 0.30;   // general radial clearance
 bezel_plate    = 1.2;
-rim_h          = 3.8;    // body rim engaged inside the bezel skirt
-rim_wall       = 1.2;    // bezel skirt wall
-// twist-lock bezel: 3 lugs inside the skirt run in L-slots in the rim.
-// Push down, turn clockwise ~30°. Nothing has to flex, so nothing cracks.
-bay_n          = 3;
-bay_lug_w      = 14;     // lug width, degrees
-bay_lug_h      = 1.2;    // lug height
-bay_lug_z      = 0.6;    // lug bottom, above the skirt's lower edge
-bay_lug_depth  = 0.7;    // how far the lug sticks in from the skirt wall
-bay_depth      = 0.55;   // slot depth into the rim
-bay_twist      = 30;     // degrees of turn from entry to locked
-bay_lock       = 0.05;   // ramp interference at the locked end (clamps the bezel)
-
-// What stops the bezel untwisting (the body supports both; pick the bezel):
-//   "detent" - a sprung strip in the rim clicks a ridge into a notch in the
-//              bezel at the locked position. No hardware. (default)
-//   "screw"  - also adds a boss for one M2 x 4 pan-head self-tapping screw
-//              whose tip pins the bezel to the rim.
-// CLI:  openscad -D 'bezel_lock="screw"' -D 'PART="bezel"' -o bezel_screw.stl o2_analyzer.scad
-bezel_lock     = "detent";
-det_a0         = 52;     // detent strip: fixed end angle (deg, in the solid rim between slots,
-det_a1         = 76;     //   and clear of the PCB tab at the USB-C end)
-det_bump_a     = 70;     // ridge angle on the strip
-det_bump       = 0.6;    // ridge height above the rim surface (0.3 mm rides on the skirt)
-det_slot       = 0.45;   // slot width around the strip
-pin_a          = 18;     // screw pin hole angle in the rim (locked position)
-pin_d          = 2.2;    // hole for the screw tip in the rim
-pin_pilot      = 1.6;    // self-tapping pilot for M2 in the bezel boss
+rim_h          = 3.8;    // threaded body rim the bezel screws onto
+rim_wall       = 1.2;    // bezel skirt wall (behind the thread grooves)
+// screw-on bezel: 3-start thread on the rim, ~3/4 turn on, seats on the rim top
+bz_pitch       = 1.5;    // axial spacing between ridges (lead = 4.5 mm per turn)
+bz_starts      = 3;
+bz_depth       = 0.7;
+bz_clear       = 0.30;   // radial clearance
 
 // body <-> cap thread: 4-start, so the cap closes in < 1 turn and the
 // sensor wires barely twist
@@ -141,12 +122,11 @@ nose_od        = 26.0;
 oring_squeeze  = 0.2;    // radial squeeze on the O-ring (~12% of its 1.7 mm section)
 oring_bore     = s_oring_d - 2*oring_squeeze;
 
-// sensor snap hooks (in the cap wall)
-hook_n         = 3;
-hook_w         = 5.0;
-hook_t         = 1.4;    // beam thickness (flex direction)
-hook_overlap   = 0.75;   // how far the hook tip reaches over the flange edge
-hook_preload   = 0.4;    // how far the 45° hook face sits below the flange edge
+// sensor retainer collar: sits on the flange edge; its spring petals are
+// pressed by the end of the body's spigot when the cap is screwed on
+ret_preload    = 0.5;    // petal deflection with the cap fully tightened
+ret_petal_t    = 0.8;
+ret_id         = 25.8;   // passes the Molex plug and the rear boss
 
 $fn = 96;
 eps = 0.01;
@@ -173,7 +153,7 @@ z_sface   = z_ch0 + chamber_h;             // sensor face (nominal)
 // cap's bottom face, so the whole threaded nose and the O-ring are exposed
 z_sh      = cap_style == "diverter" ? z_sface + nose_len : 0;   // sensor shoulder plane
 z_flange0 = z_sh + s_body_h;
-z_flange1 = z_flange0 + s_flange_h;        // flange top edge (hooks catch here)
+z_flange1 = z_flange0 + s_flange_h;        // flange top edge (the retainer sits here)
 cav_above = max(1.0, plug_clear - th_len); // the spigot bore is free space too
 cap_h     = z_sh + sensor_h + cav_above + th_len;
 z_cap_in_body = th_len - cap_h;            // cap origin in body coordinates
@@ -215,7 +195,14 @@ module body() {
         union() {
             // main tube (above spigot), stepped rim at the top for the bezel
             translate([0, 0, th_len]) cylinder(d = od, h = z_rim0 - th_len);
-            translate([0, 0, z_rim0 - eps]) cylinder(d = rim_od, h = rim_h + eps);
+            // threaded rim for the bezel (lead-in chamfer at the top)
+            translate([0, 0, z_rim0 - eps]) intersection() {
+                thread_solid(rim_od/2 - bz_depth, bz_depth, rim_h + eps, bz_pitch, bz_starts);
+                union() {
+                    cylinder(d = rim_od + 1, h = rim_h - 0.8);
+                    translate([0, 0, rim_h - 0.8 - eps]) cylinder(d1 = rim_od + 1, d2 = rim_od - 2*bz_depth - 0.6, h = 0.8 + 2*eps);
+                }
+            }
             // threaded spigot (male, 4-start) with a lead-in chamfer
             intersection() {
                 thread_solid(th_major/2 - th_depth, th_depth, th_len + eps, th_pitch, th_starts);
@@ -246,9 +233,12 @@ module body() {
         translate([0, 0, z_cav0]) cylinder(d = cav_bore, h = z_pcb - z_cav0 + eps);
         translate([-ads_l/2, -ads_w/2 - 3, z_cav0 - 0.6]) cube([ads_l, ads_w, 1]);
 
-        // display seat: the round board plus a pocket for its USB-C tab
+        // display seat: the round board plus a pocket for its USB-C tab, with a
+        // channel through the rim so the tab and connector can be lowered in
         translate([0, 0, z_pcb]) cylinder(d = disp_bore, h = body_h);
-        translate([0, 0, z_pcb - eps]) linear_extrude(pcb_t + 0.3 + eps) pcb_tab_2d(fit);
+        translate([0, 0, z_pcb - eps]) linear_extrude(body_h - z_pcb + 1) pcb_tab_2d(fit);
+        translate([0, 0, z_rim0 - eps]) linear_extrude(rim_h + 1) rotate([0, 0, usb_angle - 270])
+            translate([-pcb_tab_w/2 - fit, -od/2 - 1]) square([pcb_tab_w + 2*fit, od/2 + 1]);
 
         // USB-C slot (opening flares outward for the plug overmould)
         rotate([0, 0, usb_angle]) translate([od/2 - 3.5, 0, z_pcb - usb_h/2 - 0.2]) {
@@ -260,16 +250,6 @@ module body() {
 
         // flexure power button: U-slot through the wall + thinned tab
         rotate([0, 0, btn_angle]) button_cut();
-
-        // twist-lock slots in the rim for the bezel lugs
-        for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n]) bayonet_slot();
-
-        // detent strips: U-shaped slots free a strip of the rim so it can flex
-        for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n]) detent_cut();
-
-        // hole for the bezel screw's tip (only used with the screw bezel)
-        rotate([0, 0, pin_a]) translate([disp_bore/2 + 0.5, 0, z_pin]) rotate([0, 90, 0])
-            cylinder(d = pin_d, h = 5, $fn = 24);
 
         // thread relief at the shoulder: the cap's top turn can run fully home
         translate([0, 0, th_len - 0.8]) difference() {
@@ -283,9 +263,6 @@ module body() {
 
     // flexure button nub
     rotate([0, 0, btn_angle]) button_nub();
-
-    // detent ridges on the strips
-    for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n]) detent_bump();
 
     // PCB support pads in the cavity (3 pads, skip USB + button sectors)
     for (a = [usb_angle + 120, usb_angle + 240, usb_angle + 60])
@@ -303,51 +280,10 @@ module sector(r0, r1, a0, a1, z0, z1) {
         rotate_extrude(angle = a1 - a0, $fn = 192) translate([r0, 0]) square([r1 - r0, z1 - z0]);
 }
 
-// ---- bezel detent / pin ----
-z_det0 = z_rim0 + 0.35;          // strip bottom
-z_det1 = z_rim0 + 2.2;           // strip top
-z_pin  = z_rim0 + 2.6;           // screw axis height
-det_sd = det_slot / (2 * PI * rim_od/2) * 360;    // slot width in degrees
-
 // the PCB's tab, as a 2D outline grown by `off`
 module pcb_tab_2d(off = 0) {
     rotate([0, 0, usb_angle - 270]) offset(delta = off)
         translate([-pcb_tab_w/2, -pcb_tab_r]) square([pcb_tab_w, pcb_tab_r]);
-}
-
-module detent_cut() {
-    r0 = disp_bore/2 - 0.5;  r1 = rim_od/2 + 0.6;
-    sector(disp_bore/2 - eps, rim_od/2 - 1.9, det_a0, det_a1 + det_sd, z_det0 - eps, z_det1 + eps);   // thin the strip to 1.9 mm
-    sector(r0, r1, det_a0, det_a1 + det_sd, z_det0 - det_slot, z_det0);        // below the strip
-    sector(r0, r1, det_a0, det_a1 + det_sd, z_det1, z_det1 + det_slot);        // above the strip
-    sector(r0, r1, det_a1, det_a1 + det_sd, z_det0 - det_slot, z_det1 + det_slot);   // free end
-}
-
-module detent_bump() {
-    rc = rim_od/2 + det_bump - 0.7;                 // ridge = r 0.7 rod, its outer edge det_bump proud
-    rotate([0, 0, det_bump_a]) translate([rc, 0, z_det0 + 0.15]) {
-        cylinder(r = 0.7, h = z_det1 - z_det0 - 0.9, $fn = 24);
-        translate([0, 0, z_det1 - z_det0 - 0.9 - eps]) cylinder(r1 = 0.7, r2 = 0.15, h = 0.6, $fn = 24);   // lead-in for the skirt
-    }
-}
-
-// L-slot: vertical entry from the rim top, then a ramped run clockwise
-module bayonet_slot() {
-    r_in  = rim_od/2 - bay_depth;
-    r_out = rim_od/2 + 1;
-    lug0  = z_rim0 + bay_lug_z;
-    zg0   = lug0 - 0.15;
-    ztop0 = lug0 + bay_lug_h + 0.15;              // groove top at the entry
-    ztop1 = lug0 + bay_lug_h - bay_lock;           // groove top at the locked end
-    aE    = bay_lug_w/2 + 2;                       // entry half-width
-    aEnd  = -(bay_twist + bay_lug_w/2 + 1);
-    sector(r_in, r_out, -aE, aE, zg0, body_h + 1);
-    N = 10;
-    for (i = [0 : N - 1]) {
-        a1 = aE - (aE - aEnd) * i / N;
-        a0 = aE - (aE - aEnd) * (i + 1) / N;
-        sector(r_in, r_out, a0 - 0.01, a1 + 0.01, zg0, ztop0 - (ztop0 - ztop1) * i / (N - 1));
-    }
 }
 
 /* ---- flexure button ---- */
@@ -399,46 +335,28 @@ module battery_latch() {
 }
 
 /* ============================== BEZEL ================================ */
-// Twist-lock: push it down with the lugs in the rim's entry slots, then turn
-// it clockwise about 30° until snug.  Small notches on the skirt edge mark
-// the lugs.  Turn it back the other way to remove it.
+// Screws onto the threaded rim (3-start, about 3/4 turn) and seats on the
+// rim's top face. The skirt is 0.4 mm short of the body shoulder, so it's the
+// rim top that it tightens against.
 module bezel() {
-    skirt_h = rim_h;
-    skirt_id = od - 2*rim_wall;
+    skirt_h = rim_h - 0.4;
     difference() {
         cylinder(d = od, h = skirt_h + bezel_plate);
-        translate([0, 0, -eps]) cylinder(d = skirt_id, h = skirt_h + eps);
+        // female thread (the helix solid is filled to the centre, so it also clears the inside)
+        translate([0, 0, -eps]) thread_solid(rim_od/2 - bz_depth + bz_clear, bz_depth, skirt_h + eps, bz_pitch, bz_starts);
+        translate([0, 0, -eps]) cylinder(d1 = rim_od + 2*bz_clear + 0.8, d2 = rim_od - 2*bz_depth, h = 0.8);   // lead-in
         // display window with outward chamfer
         translate([0, 0, skirt_h - eps]) cylinder(d = view_d, h = bezel_plate + 2*eps);
         translate([0, 0, skirt_h + bezel_plate - 0.8]) cylinder(d1 = view_d, d2 = view_d + 1.6, h = 0.8 + eps);
         // glass recess (glass sits 0.4 into the plate, so it can't shift)
         translate([0, 0, skirt_h - eps]) cylinder(d = glass_d + 0.5, h = 0.4 + eps);
-        // detent notches: the rim ridge drops in here at the locked position
-        for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n + det_bump_a + bay_twist])
-            sector(skirt_id/2 - 0.1, skirt_id/2 + det_bump - 0.1, -2.4, 2.4, -eps, z_det1 - z_rim0 + 0.3);
-        // lead-in chamfer on the skirt's inner lower edge (rides over the ridges)
-        translate([0, 0, -eps]) cylinder(d1 = skirt_id + 0.8, d2 = skirt_id, h = 0.4);
-        // screw: pilot through the boss and skirt
-        if (bezel_lock == "screw")
-            rotate([0, 0, pin_a + bay_twist]) translate([skirt_id/2 - 1, 0, z_pin - z_rim0]) rotate([0, 90, 0])
-                cylinder(d = pin_pilot, h = 10, $fn = 16);
-        // lug index notches on the skirt's lower edge
-        for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n])
-            translate([od/2, 0, -eps]) rotate([0, 0, 45]) cube([1.2, 1.2, 1.0], center = true);
+        // grip flutes
+        for (i = [0 : 23]) rotate([0, 0, i * 15])
+            translate([od/2 + 0.5, 0, -eps]) cylinder(d = 1.6, h = skirt_h + bezel_plate - 0.8, $fn = 12);
         // top outer edge chamfer
         translate([0, 0, skirt_h + bezel_plate - 0.6])
             difference() { cylinder(d = od + 1, h = 1); cylinder(d1 = od, d2 = od - 1.2, h = 0.6 + eps); }
     }
-    // lugs
-    for (k = [0 : bay_n - 1]) rotate([0, 0, k * 360 / bay_n])
-        sector(skirt_id/2 - bay_lug_depth, skirt_id/2 + 0.2, -bay_lug_w/2, bay_lug_w/2,
-               bay_lug_z, bay_lug_z + bay_lug_h);
-    // screw boss (M2 x 4 pan head: 2.6 mm of thread, tip 1 mm into the rim)
-    if (bezel_lock == "screw")
-        rotate([0, 0, pin_a + bay_twist]) difference() {
-            sector(od/2 - 0.2, od/2 + 1.6, -6, 6, 0, skirt_h);
-            translate([skirt_id/2 - 1, 0, z_pin - z_rim0]) rotate([0, 90, 0]) cylinder(d = pin_pilot, h = 10, $fn = 16);
-        }
 }
 
 /* =============================== CAP ================================= */
@@ -455,10 +373,8 @@ module cap() {
         // Molex plug headroom
         translate([0, 0, z_sh + sensor_h - eps]) cylinder(d = th_major - 2*th_depth + 2*th_clear - 0.2, h = cav_above + 2*eps);
 
-        // ---- snap hook slots (beams are added back below) ----
-        for (i = [0 : hook_n - 1]) rotate([0, 0, i * 360 / hook_n])
-            translate([s_body_d/2, -hook_w/2 - 0.8, z_flange0 - 4])
-                cube([r_fb + hook_t + 1.2 - s_body_d/2, hook_w + 1.6, z_flange1 - hook_preload + 2.8 - (z_flange0 - 4)]);
+        // room for the retainer collar above the flange
+        translate([0, 0, z_flange1 - eps]) cylinder(d = 2*ret_r1 + 0.8, h = sensor_h - s_body_h - s_flange_h + 2*eps);
 
         // ---- body thread (female, 4-start) ----
         translate([0, 0, tot - th_len])
@@ -472,8 +388,6 @@ module cap() {
         for (i = [0 : 17]) rotate([0, 0, i * 20])
             translate([od/2 + 0.6, 0, z_fl]) cylinder(d = 2.4, h = tot - th_len - z_fl - 1, $fn = 16);
     }
-    // snap hooks
-    for (i = [0 : hook_n - 1]) rotate([0, 0, i * 360 / hook_n]) sensor_hook(r_fb);
 }
 
 // open style: plain cylinder, open at the bottom; the flange sits on the
@@ -521,25 +435,41 @@ module cap_shell_diverter(tot) {
     }
 }
 
-// one cantilever hook: beam rooted 4 mm below the flange bore step, 45°
-// catch face resting on the flange's top edge, 45° lead-in on top
-module sensor_hook(r_fb) {
-    z_root = z_flange0 - 4;
-    zc = z_flange1 - hook_preload;              // where the catch face meets the flange edge radius
-    r_tip = s_flange_d/2 - hook_overlap;
-    translate([r_fb, -hook_w/2, z_root - eps]) cube([hook_t, hook_w, zc + 2.2 - z_root]);
-    translate([0, hook_w/2, 0]) rotate([90, 0, 0]) linear_extrude(hook_w)
-        polygon([[r_fb + eps, zc - (r_fb - (s_flange_d/2))],            // catch face start (at the beam)
-                 [r_tip, zc + (s_flange_d/2 - r_tip)],                  // 45° up and in
-                 [r_tip, zc + (s_flange_d/2 - r_tip) + 0.4],
-                 [r_fb + eps, zc + (s_flange_d/2 - r_tip) + 0.4 + (r_fb - r_tip)]]);  // 45° lead-in back out
-}
-
 // horizontal hole with a 45° roof (prints without support when z is up)
 module teardrop_x(d, len) {
     rotate([0, 90, 0]) linear_extrude(len) hull() {
         circle(d = d, $fn = 24);
         translate([-d * 0.707, 0]) square(0.01, center = true);
+    }
+}
+
+/* ========================= SENSOR RETAINER ============================ */
+// A collar that sits on the outer edge of the sensor flange. Its 8 spring
+// petals are pressed down by the end of the body's spigot when the cap is
+// screwed on, clamping the flange onto its seat in the cap. Exported
+// petals-down; print as-is in PETG (or TPU), no supports.
+ret_r0   = ret_id/2;
+ret_r1   = s_bore_flange/2 + 0.2;            // tube OD
+ret_lip0 = s_flange_d/2 - 0.65;              // contact lip: touches the flange's edge
+ret_lip1 = s_flange_d/2 + 0.15;
+ret_z0   = z_flange1 + s_taper_h * (s_flange_d/2 - ret_lip0) / (s_flange_d/2 - s_boss_d/2) + 0.05;   // lip rests on the flange's taper (cap coords)
+ret_z1   = cap_h - th_len + ret_preload;     // petal top = spigot end + preload
+ret_petal_od = th_major - 2*th_depth + 2*th_clear - 0.8;
+
+module retainer() {
+    difference() {
+        union() {
+            translate([0, 0, ret_z0]) cylinder(r = ret_lip1, h = 1.0 + eps);                       // lip
+            translate([0, 0, ret_z0 + 1.0]) cylinder(r = ret_r1, h = ret_z1 - ret_z0 - 1.0);      // tube
+            translate([0, 0, ret_z1 - ret_petal_t]) cylinder(d = ret_petal_od, h = ret_petal_t);   // petal disc
+        }
+        translate([0, 0, ret_z0 - 1]) cylinder(r = ret_lip0, h = 2.0 + eps);
+        translate([0, 0, ret_z0 + 1.0 - eps]) cylinder(r = ret_r0, h = ret_z1 - ret_z0);
+        // 8 slots split the disc into spring petals
+        for (i = [0 : 7]) rotate([0, 0, i * 45 + 22.5])
+            translate([ret_r1 - 0.3, -0.7, ret_z1 - ret_petal_t - 1]) cube([12, 1.4, ret_petal_t + 2]);
+        // wire notch so the sensor leads can lie flat
+        translate([-2.5, ret_r0 - 1, ret_z1 - 3]) cube([5, 4, 4]);
     }
 }
 
@@ -602,6 +532,7 @@ module assembly(explode = 0) {
     translate([0, 0, z_cap_in_body - explode * 2]) {
         color("#e0e0e0") cap();
         translate([0, 0, z_sh + explode * 1.2]) dummy_sensor();
+        color("#d08030") translate([0, 0, explode * 1.6]) retainer();
         if (cap_style == "open" && show_diverter)
             color("#1f9e8f") translate([0, 0, -div_len - explode * 1.4]) diverter();
     }
@@ -613,4 +544,5 @@ else if (PART == "section")    difference() { assembly(0); translate([-60, 0, -8
 else if (PART == "body")       body();
 else if (PART == "bezel")      translate([0, 0, rim_h + bezel_plate]) rotate([180, 0, 0]) bezel();
 else if (PART == "cap")        cap();
+else if (PART == "retainer")   translate([0, 0, ret_z1]) rotate([180, 0, 0]) retainer();
 else if (PART == "fit_test")   fit_test();

@@ -39,7 +39,7 @@ The sensor profile is measured from a real PSR-11-39-MD:
 
 Other R-22D-type sensors may differ slightly, so check them against yours. Only the rear taper and boss (marked `*`) are still estimates. `s_nose_h` and the O-ring size set how much thread the diverter grips, so they matter most. If you change the nose values or `cap_floor_t`, change them in `diverter.scad` too.
 - `plug_clear` — the space behind the sensor for the Molex plug and its wire bend (11 mm).
-- `pcb_d`, `pcb_tab_w`, `pcb_tab_r`: the board outline, a 37 mm circle plus a 14.23 mm tab at the USB-C end, 38.5 mm overall, from the board's spec drawing.
+- `pcb_d`, `pcb_tab_w`, `pcb_tab_r`: the board outline, a 37 mm circle plus a 14.23 mm tab at the USB-C end, 38.5 mm overall, from the board's spec drawing. The display glass is smaller, about 36 mm. The on/off switch sticks out about 0.4 mm past the board edge (`sw_protrude`) and has its own channel down the rim.
 - `glass_d`, `glass_stack`, `comp_h` — display glass diameter, glass-to-PCB height, and the tallest component under the PCB.
 - `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach`: where the USB-C port and the on/off switch sit, and how far in the button nub reaches. Angles are measured looking at the display side: 0° is right, 270° is the USB-C end, and 180° puts the switch on the left.
 - `pad_angles`: where the three board support pads go. Check that the back of your board has no parts at its edge at 30°, 150° and 300°.
@@ -57,6 +57,7 @@ The body prints spigot-down, so its thread starts on the build plate. Turn on yo
 |---|---|---|---|
 | Battery latches | `latch_hook` (1.0) | 0.8 | 1.2 |
 | Body/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
+| Display board in the body | `disp_clear` (0.5) | 0.7 | 0.3 |
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
 | O-ring seal in the cap floor | `oring_squeeze` (0.2) | 0.15 | 0.25 |
 | Bezel thread | `bz_clear` (0.30) | 0.4 | 0.2 |

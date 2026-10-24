@@ -82,6 +82,9 @@ ads_zone       = 3.8;    // free height for ADS board + soldered wires
 /* ---------- Enclosure ---------- */
 od             = 46.0;
 fit            = 0.30;   // general radial clearance
+disp_clear     = 0.5;    // radial room around the display board (printed holes shrink 0.2-0.3)
+sw_protrude    = 0.4;    // the on/off switch sticks out past the board's 37 mm edge
+sw_notch_w     = 5.0;    // width of the channel for it down the inside of the rim
 bezel_plate    = 1.2;
 rim_h          = 3.8;    // threaded body rim the bezel screws onto
 rim_wall       = 1.2;    // bezel skirt wall (behind the thread grooves)
@@ -122,7 +125,7 @@ z_glass   = z_pcb + pcb_t + glass_stack;   // glass top
 body_h    = z_glass;
 z_rim0    = body_h - rim_h;
 
-disp_bore = pcb_d + 2*fit;
+disp_bore = pcb_d + 2*disp_clear;
 cav_bore  = od - 2*2.4;                    // ADS / component cavity
 rim_od    = od - 2*rim_wall - 2*fit;
 
@@ -211,9 +214,12 @@ module body() {
         // display seat: the round board plus a pocket for its USB-C tab, with a
         // channel through the rim so the tab and connector can be lowered in
         translate([0, 0, z_pcb]) cylinder(d = disp_bore, h = body_h);
-        translate([0, 0, z_pcb - eps]) linear_extrude(body_h - z_pcb + 1) pcb_tab_2d(fit);
+        translate([0, 0, z_pcb - eps]) linear_extrude(body_h - z_pcb + 1) pcb_tab_2d(disp_clear);
         translate([0, 0, z_rim0 - eps]) linear_extrude(rim_h + 1) rotate([0, 0, usb_angle - 270])
-            translate([-pcb_tab_w/2 - fit, -od/2 - 1]) square([pcb_tab_w + 2*fit, od/2 + 1]);
+            translate([-pcb_tab_w/2 - disp_clear, -od/2 - 1]) square([pcb_tab_w + 2*disp_clear, od/2 + 1]);
+        // channel for the on/off switch, which sticks out past the board edge
+        rotate([0, 0, btn_angle]) translate([pcb_d/2 - 1, -sw_notch_w/2, z_pcb - btn_z_off - 1.5])
+            cube([sw_protrude + disp_clear + 1.4, sw_notch_w, body_h - z_pcb + btn_z_off + 3]);
 
         // USB-C slot (opening flares outward for the plug overmould)
         rotate([0, 0, usb_angle]) translate([od/2 - 3.5, 0, z_pcb - usb_h/2 - 0.2]) {
@@ -387,7 +393,8 @@ module fit_test() {
     difference() {          // display seat: drop the board in, tab into its pocket
         cylinder(d = 2*pcb_tab_r + 4, h = 2);
         translate([0, 0, -eps]) cylinder(d = disp_bore, h = 3);
-        translate([0, 0, -eps]) linear_extrude(3) pcb_tab_2d(fit);
+        translate([0, 0, -eps]) linear_extrude(3) pcb_tab_2d(disp_clear);
+        rotate([0, 0, btn_angle]) translate([pcb_d/2 - 1, -sw_notch_w/2, -eps]) cube([sw_protrude + disp_clear + 1.4, sw_notch_w, 3]);
     }
     // sensor seat: the cap floor (O-ring hole) with the body bore above it.
     // The sensor should sit on the floor with its O-ring snug in the hole,

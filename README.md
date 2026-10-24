@@ -1,6 +1,6 @@
 # Compact O2 Analyzer — ESP32-2424S012 + ADS1115 + R-22D
 
-A Ø46 mm handheld analyzer made from **4 printed parts and no screws**: bezel, body, cap and diverter. The round display sits on top. The cap unscrews in under one turn to give access to both the sensor and the battery. It's 67.7 mm long plus the sensor's 4.8 mm threaded nose, or 81.3 mm with the diverter on.
+A handheld analyzer (Ø46 mm body with a Ø50 mm bezel) made from **4 printed parts and no screws**: bezel, body, cap and diverter. The round display sits on top. The cap unscrews in under one turn to give access to both the sensor and the battery. It's 68.3 mm long plus the sensor's 4.8 mm threaded nose, or 81.9 mm with the diverter on.
 
 ```
    ┌──────── BEZEL ────────┐   screws onto the rim, holds the display glass
@@ -39,7 +39,7 @@ The sensor profile is measured from a real PSR-11-39-MD:
 
 Other R-22D-type sensors may differ slightly, so check them against yours. Only the rear taper and boss (marked `*`) are still estimates. `s_nose_h` and the O-ring size set how much thread the diverter grips, so they matter most. If you change the nose values or `cap_floor_t`, change them in `diverter.scad` too.
 - `plug_clear` — the space behind the sensor for the Molex plug and its wire bend (11 mm).
-- `pcb_d`, `pcb_tab_w`, `pcb_tab_r`: the board outline, a 37 mm circle plus a 14.23 mm tab at the USB-C end, 38.5 mm overall, from the board's spec drawing. The display glass is smaller, about 36 mm. The on/off switch sticks out about 0.4 mm past the board edge (`sw_protrude`) and has its own channel down the rim.
+- `pcb_d`, `pcb_tab_w`, `pcb_tab_r`: the board outline, a 37 mm circle plus a 14.23 mm tab at the USB-C end, 38.5 mm overall, from the board's spec drawing. The board has a factory **42 mm cover glass** (1.75 mm thick, bevelled to 0.5 mm over its outer 2 mm, underside 3.3 mm above the back of the board) that overhangs the board. It sits in a 42.6 mm pocket at the top of the body (`cover_d`, `cover_t`, `cover_under`), which is why the rim and bezel are wider than the rest of the body. The on/off switch sticks out about 0.4 mm past the board edge (`sw_protrude`) and has its own channel down the rim.
 - `glass_d`, `glass_stack`, `comp_h` — display glass diameter, glass-to-PCB height, and the tallest component under the PCB.
 - `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach`: where the USB-C port and the on/off switch sit, and how far in the button nub reaches. Angles are measured looking at the display side: 0° is right, 270° is the USB-C end, and 180° puts the switch on the left.
 - `pad_angles`: where the three board support pads go. Check that the back of your board has no parts at its edge at 30°, 150° and 300°.
@@ -93,8 +93,8 @@ The board's on/off button drives its IP5306 power chip. Press once to turn on; d
 
 ## Assembly
 1. Solder the wires to the ADS1115. Seat it in the floor recess with double-sided foam tape, then feed the sensor and battery leads down through the two floor holes. Leave the sensor leads about 3 cm longer than the straight run. The cap turns a little under one turn, and that slack takes up the twist.
-2. Solder the four ADS1115 wires to the board's SH connector pins, at the lower right with the display facing you, and plug the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall. Three small pads under the board's edge support it; they sit where the back of the board has no parts at the edge.
-3. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. Snug by hand is enough. There's a gap in the rim's thread at the USB-C end, where the display's tab passes through; that's normal.
+2. Solder the four ADS1115 wires to the board's SH connector pins, at the lower right with the display facing you, and plug the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The 42 mm cover glass settles into the pocket at the top, level with the rim. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall. Three small pads under the board's edge support it; they sit where the back of the board has no parts at the edge.
+3. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. It sits just above the cover glass, so the glass and board can't lift, and its window shows the flat part of the glass. Snug by hand is enough. There's a gap in the rim's thread at the USB-C end, where the display's tab passes through; that's normal.
 4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
 5. Plug the Molex into the back of the sensor. Drop the sensor nose-first into the cap so its shoulder sits on the floor and the O-ring presses into the floor hole. The threaded nose sticks out underneath.
 6. Screw the cap onto the body. It takes a little under one turn.

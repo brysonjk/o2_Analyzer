@@ -29,11 +29,15 @@ div_len = 13.59;          // diverter.scad length (its z_top); its rear face cla
 pcb_d          = 37.0;   // round part of the PCB (spec drawing)
 pcb_tab_w      = 14.23;  // tab at the USB-C end (spec drawing)
 pcb_tab_r      = 20.0;   // centre -> end of the tab (38.5 overall - 18.5)
-glass_d        = 36.6;   // round display glass / backlight frame dia
-glass_stack    = 3.6;    // glass top -> PCB top surface (display side)
+glass_d        = 36.0;   // round LCD module under the cover glass
+cover_d        = 42.0;   // factory cover glass (measured; overhangs the board)
+cover_t        = 1.75;   // cover glass thickness (flat part)
+cover_bevel_w  = 2.0;    // bevelled band at its edge
+cover_edge_t   = 0.5;    // thickness at the very edge
+cover_under    = 3.3;    // back of the PCB -> underside of the cover glass (measured)
 pcb_t          = 1.0;
 comp_h         = 3.8;    // tallest part under the PCB (USB-C, module)
-view_d         = 33.0;   // visible window (active area ≈ Ø32.4)
+view_d         = 37.0;   // bezel window: the flat part of the cover glass
 
 // USB-C and on/off button positions (angle measured CCW looking from top,
 // 0° = +X).  Rotate these to match YOUR board.
@@ -87,7 +91,8 @@ sw_protrude    = 0.4;    // the on/off switch sticks out past the board's 37 mm 
 sw_notch_w     = 5.0;    // width of the channel for it down the inside of the rim
 bezel_plate    = 1.2;
 rim_h          = 3.8;    // threaded body rim the bezel screws onto
-rim_wall       = 1.2;    // bezel skirt wall (behind the thread grooves)
+rim_wall       = 1.2;    // wall between the glass pocket and the rim thread root
+glass_clear    = 0.3;    // radial room around the cover glass
 // screw-on bezel: 3-start thread on the rim, ~3/4 turn on, seats on the rim top
 bz_pitch       = 1.5;    // axial spacing between ridges (lead = 4.5 mm per turn)
 bz_starts      = 3;
@@ -121,13 +126,15 @@ z_floor   = z_batt0 + batt_zone;           // floor between battery & ADS
 floor_t   = 1.0;
 z_cav0    = z_floor + floor_t;             // ADS cavity floor
 z_pcb     = z_cav0 + ads_zone + comp_h;    // PCB bottom face rests here
-z_glass   = z_pcb + pcb_t + glass_stack;   // glass top
-body_h    = z_glass;
+z_glass   = z_pcb + cover_under + cover_t;  // cover glass top
+body_h    = z_glass + 0.1;                 // rim top, just above the glass
 z_rim0    = body_h - rim_h;
 
 disp_bore = pcb_d + 2*disp_clear;
 cav_bore  = od - 2*2.4;                    // ADS / component cavity
-rim_od    = od - 2*rim_wall - 2*fit;
+glass_pocket_d = cover_d + 2*glass_clear;
+rim_od    = glass_pocket_d + 2*(rim_wall + bz_depth);   // bezel thread crest
+bz_od     = rim_od + 2*(bz_clear + 1.5);                // bezel outside (about 50 mm)
 
 /* ---------- Derived heights: CAP (z = 0 at its bottom face) ---------- */
 z_sh      = cap_floor_t;                   // sensor shoulder rests on the floor
@@ -239,7 +246,10 @@ module body() {
         }
 
         // top chamfer on rim inner edge (eases display insertion)
-        translate([0, 0, body_h - 0.8]) cylinder(d1 = disp_bore, d2 = disp_bore + 1.6, h = 0.8 + eps);
+        // cover-glass pocket at the top; the ledge sits 0.15 below the glass, so
+        // the board's pads carry it and the ledge only catches a press
+        translate([0, 0, z_pcb + cover_under - 0.15]) cylinder(d = glass_pocket_d, h = body_h);
+        translate([0, 0, body_h - 0.5]) cylinder(d1 = glass_pocket_d, d2 = glass_pocket_d + 1.0, h = 0.5 + eps);
     }
 
     // flexure button nub
@@ -317,26 +327,26 @@ module battery_latch() {
 
 /* ============================== BEZEL ================================ */
 // Screws onto the threaded rim (3-start, about 3/4 turn) and seats on the
-// rim's top face. The skirt is 0.4 mm short of the body shoulder, so it's the
-// rim top that it tightens against.
+// rim's top face, just above the cover glass, so the glass and board can't
+// lift. The window shows the flat part of the glass and hides its bevel.
+// The skirt is 0.4 mm short of the body shoulder, so it's the rim top that
+// it tightens against. It is wider (bz_od) than the 46 mm body below it.
 module bezel() {
     skirt_h = rim_h - 0.4;
     difference() {
-        cylinder(d = od, h = skirt_h + bezel_plate);
+        cylinder(d = bz_od, h = skirt_h + bezel_plate);
         // female thread (the helix solid is filled to the centre, so it also clears the inside)
         translate([0, 0, -eps]) thread_solid(rim_od/2 - bz_depth + bz_clear, bz_depth, skirt_h + eps, bz_pitch, bz_starts);
         translate([0, 0, -eps]) cylinder(d1 = rim_od + 2*bz_clear + 0.8, d2 = rim_od - 2*bz_depth, h = 0.8);   // lead-in
         // display window with outward chamfer
         translate([0, 0, skirt_h - eps]) cylinder(d = view_d, h = bezel_plate + 2*eps);
-        translate([0, 0, skirt_h + bezel_plate - 0.8]) cylinder(d1 = view_d, d2 = view_d + 1.6, h = 0.8 + eps);
-        // glass recess (glass sits 0.4 into the plate, so it can't shift)
-        translate([0, 0, skirt_h - eps]) cylinder(d = glass_d + 0.5, h = 0.4 + eps);
+        translate([0, 0, skirt_h + bezel_plate - 0.6]) cylinder(d1 = view_d, d2 = view_d + 1.2, h = 0.6 + eps);
         // grip flutes
         for (i = [0 : 23]) rotate([0, 0, i * 15])
-            translate([od/2 + 0.5, 0, -eps]) cylinder(d = 1.6, h = skirt_h + bezel_plate - 0.8, $fn = 12);
+            translate([bz_od/2 + 0.5, 0, -eps]) cylinder(d = 1.6, h = skirt_h + bezel_plate - 0.8, $fn = 12);
         // top outer edge chamfer
         translate([0, 0, skirt_h + bezel_plate - 0.6])
-            difference() { cylinder(d = od + 1, h = 1); cylinder(d1 = od, d2 = od - 1.2, h = 0.6 + eps); }
+            difference() { cylinder(d = bz_od + 1, h = 1); cylinder(d1 = bz_od, d2 = bz_od - 1.2, h = 0.6 + eps); }
     }
 }
 
@@ -390,8 +400,10 @@ module teardrop_x(d, len) {
 // Display seat ring, sensor seat (cap floor + body bore), flange ring, and
 // 4 mm of the body/cap thread.
 module fit_test() {
-    difference() {          // display seat: drop the board in, tab into its pocket
-        cylinder(d = 2*pcb_tab_r + 4, h = 2);
+    translate([-4, 0, 0]) difference() {          // display seat: drop the board in (tab and switch into their notches),
+                            // with the cover-glass pocket as a step on top
+        cylinder(d = glass_pocket_d + 4, h = 3.5);
+        translate([0, 0, 2]) cylinder(d = glass_pocket_d, h = 2);
         translate([0, 0, -eps]) cylinder(d = disp_bore, h = 3);
         translate([0, 0, -eps]) linear_extrude(3) pcb_tab_2d(disp_clear);
         rotate([0, 0, btn_angle]) translate([pcb_d/2 - 1, -sw_notch_w/2, -eps]) cube([sw_protrude + disp_clear + 1.4, sw_notch_w, 3]);
@@ -432,8 +444,11 @@ module dummy_sensor() {   // z = 0 at the shoulder
 }
 module dummy_display() {
     color("darkgreen") linear_extrude(pcb_t) union() { circle(d = pcb_d); pcb_tab_2d(); }
-    color("black") translate([0, 0, pcb_t]) cylinder(d = glass_d, h = glass_stack);
-    color("royalblue") translate([0, 0, pcb_t + glass_stack - 0.05]) cylinder(d = 32.4, h = 0.1);
+    color("black") translate([0, 0, pcb_t]) cylinder(d = glass_d, h = cover_under - pcb_t);       // LCD module
+    color("#202830") translate([0, 0, cover_under]) rotate_extrude() polygon([                  // cover glass
+        [0, 0], [cover_d/2, 0], [cover_d/2, cover_edge_t],
+        [cover_d/2 - cover_bevel_w, cover_t], [0, cover_t]]);
+    color("royalblue") translate([0, 0, cover_under + cover_t - 0.05]) cylinder(d = 32.4, h = 0.1);
     color("gray") rotate([0, 0, usb_angle]) translate([pcb_tab_r - 7.3, -4.5, -3.2]) cube([7.3, 9, 3.2]);
 }
 

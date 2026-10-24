@@ -109,6 +109,17 @@ To change the sensor, unscrew the diverter and the cap, then lift the sensor out
 ## Firmware
 Install the **GFX Library for Arduino** (moononournation) and **Adafruit ADS1X15** libraries. Choose the board **ESP32C3 Dev Module** and set *USB CDC On Boot* to Enabled.
 
+### Startup animation
+![Startup animation](firmware/boot_animation.gif)
+
+At power-on, bubbles rise and two oxygen atoms drift together and bond. The pair bursts into the gauge ring, and the initials are then traced in light, followed by the title and a dedication line. It lasts about 5 s; tap the screen to skip it. To personalise it, edit the defines above `drawBootFrame()` in the sketch:
+- `BOOT_INITIALS` takes 1–5 letters or digits (default `"FSS"`).
+- `BOOT_TITLE` is the title line.
+- `BOOT_LINE` is the small line under the title (`""` hides it).
+- `BOOT_MS` sets the length.
+
+The simulator plays the same animation, so you can preview a change there first; change the constants at the top of its boot-animation block to match.
+
 The display shows:
 - the O2 % in large seven-segment digits
 - an arc gauge around the rim

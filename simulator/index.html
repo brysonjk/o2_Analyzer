@@ -324,6 +324,8 @@ const gfx = {
     ctx.arc(x + .5, y + .5, r2 - .5, a1, a0, true);
     ctx.closePath(); ctx.fill();
   },
+  drawCircle(x, y, r, c) { ctx.strokeStyle = rgb(c); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x + .5, y + .5, Math.max(0, r), 0, 2 * Math.PI); ctx.stroke(); },
+  drawLine(x0, y0, x1, y1, c) { ctx.strokeStyle = rgb(c); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0 + .5, y0 + .5); ctx.lineTo(x1 + .5, y1 + .5); ctx.stroke(); },
   setTextSize(s) { this.size = s; },
   setTextColor(c) { this.color = c; },
   setCursor(x, y) { this.cx = x; this.cy = y; },
@@ -341,6 +343,185 @@ const gfx = {
   },
   flush() {},
 };
+
+/* ---------- Boot animation (mirror of bootAnimation() in the sketch) ---------- */
+const BOOT_INITIALS = "FSS";
+const BOOT_TITLE = "O2 ANALYZER";
+const BOOT_LINE = "DIVE SAFE";
+const BOOT_MS = 5000;
+
+// Stroke font on a 5 x 9 grid: each point is two digits "xy" (x 0-4 left to right, y 0-8 top to bottom),
+// consecutive points are joined, "/" lifts the pen.
+const FONT_AZ = [
+  "08 00 40 48/04 44", "00 30 41 43 34 04 34 45 47 38 08 00", "41 30 10 01 07 18 38 47", "00 20 42 46 28 08 00",
+  "40 00 08 48/04 24", "40 00 08/04 24", "41 30 10 01 07 18 38 47 44 24", "00 08/40 48/04 44", "00 40/20 28/08 48",
+  "40 47 38 18 07", "00 08/40 04 48", "00 08 48", "08 00 24 40 48", "08 00 48 40", "10 30 41 47 38 18 07 01 10",
+  "08 00 30 41 43 34 04", "10 30 41 47 38 18 07 01 10/26 48", "08 00 30 41 43 34 04 34 48",
+  "41 30 10 01 03 14 34 45 47 38 18 07", "00 40/20 28", "00 07 18 38 47 40", "00 28 40", "00 08 24 48 40",
+  "00 48/40 08", "00 24/40 24 28", "00 40 08 48"
+];
+const FONT_09 = [
+  "10 30 41 47 38 18 07 01 10", "10 20 28", "01 10 30 41 43 08 48", "01 10 30 41 43 34 14 34 45 47 38 18 07",
+  "00 04 44/40 48", "40 00 04 34 45 47 38 08", "41 30 10 01 07 18 38 47 45 34 04", "00 40 28",
+  "10 30 41 43 34 14 03 01 10 14 34 45 47 38 18 07 05 14", "44 14 03 01 10 30 41 47 38 18 07"
+];
+
+function rgb565(r, g, b) { return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3); }
+function mix565(a, b, f) {
+  if (f <= 0) return a; if (f >= 1) return b;
+  const ar = (a >> 11) & 31, ag = (a >> 5) & 63, ab = a & 31, br = (b >> 11) & 31, bg = (b >> 5) & 63, bb = b & 31;
+  return (Math.trunc(ar + (br - ar) * f) << 11) | (Math.trunc(ag + (bg - ag) * f) << 5) | Math.trunc(ab + (bb - ab) * f);
+}
+const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+const ramp = (t, t0, t1) => clamp01((t - t0) / (t1 - t0));
+const easeOut = x => { x = 1 - x; return 1 - x * x * x; };
+function hash32(x) {
+  x = (x ^ (x >>> 16)) >>> 0; x = Math.imul(x, 0x7feb352d) >>> 0; x = (x ^ (x >>> 15)) >>> 0;
+  x = Math.imul(x, 0x846ca68b) >>> 0; return (x ^ (x >>> 16)) >>> 0;
+}
+function glyph(c) {
+  c = c.toUpperCase();
+  if (c >= "A" && c <= "Z") return FONT_AZ[c.charCodeAt(0) - 65];
+  if (c >= "0" && c <= "9") return FONT_09[c.charCodeAt(0) - 48];
+  return "";
+}
+// Walk a glyph's strokes, calling seg(ax, ay, bx, by) for each straight piece (glyph box x, y, w, h).
+function forEachSeg(g, x, y, w, h, seg) {
+  let px = 0, py = 0, pen = false;
+  for (let i = 0; i < g.length;) {
+    if (g[i] === "/") { pen = false; i++; continue; }
+    if (g[i] === " ") { i++; continue; }
+    const qx = x + (g.charCodeAt(i) - 48) * w / 4, qy = y + (g.charCodeAt(i + 1) - 48) * h / 8;
+    i += 2;
+    if (pen && seg(px, py, qx, qy) === false) return;
+    px = qx; py = qy; pen = true;
+  }
+}
+// Draw the first `prog` (0..1) of a glyph with a round pen of radius r. Returns the pen tip.
+function traceGlyph(g, x, y, w, h, prog, r, col) {
+  let total = 0;
+  forEachSeg(g, x, y, w, h, (ax, ay, bx, by) => { total += Math.hypot(bx - ax, by - ay); });
+  let left = prog * total, tx = -1, ty = -1;
+  const step = Math.max(1, r * 0.5);
+  forEachSeg(g, x, y, w, h, (ax, ay, bx, by) => {
+    if (left <= 0) return false;
+    const L = Math.hypot(bx - ax, by - ay), run = Math.min(L, left);
+    for (let s = 0; s < run; s += step) gfx.fillCircle(Math.round(ax + (bx - ax) * s / L), Math.round(ay + (by - ay) * s / L), r, col);
+    tx = ax + (bx - ax) * run / L; ty = ay + (by - ay) * run / L;
+    gfx.fillCircle(Math.round(tx), Math.round(ty), r, col);
+    left -= L;
+  });
+  return [tx, ty];
+}
+function sparkle(x, y, s, col) {
+  gfx.fillRect(x - s, y, 2 * s + 1, 1, col);
+  gfx.fillRect(x, y - s, 1, 2 * s + 1, col);
+  if (s > 2) gfx.fillRect(x - 1, y - 1, 3, 3, col);
+}
+function typeText(s, y, size, col, n) {
+  gfx.setTextSize(size); gfx.setTextColor(col);
+  gfx.setCursor(120 - Math.trunc(s.length * 6 * size / 2), y);
+  gfx.print(s.slice(0, n));
+}
+
+function drawBootFrame(t) {
+  const WHITE = 0xFFFF, GLOW = rgb565(0, 70, 96), DEEP = rgb565(0, 4, 18), SHALLOW = rgb565(0, 46, 78);
+  const fadeIn = ramp(t, 0, 500);
+
+  // 1. Water: vertical gradient, lighter at the surface
+  for (let y = 0; y < 240; y += 6) gfx.fillRect(0, y, 240, 6, mix565(0, mix565(SHALLOW, DEEP, y / 240), fadeIn));
+
+  // 2. Rising bubbles
+  for (let i = 0; i < 18; i++) {
+    const h = hash32(i * 7919 + 17);
+    const r = 2 + h % 5, speed = 30 + (h >>> 8) % 50;
+    const y = 250 - ((t * speed / 1000 + (h >>> 16) % 260) % 270);
+    const x = 20 + (h >>> 4) % 200 + 5 * Math.sin(t * 0.004 + i);
+    const c = mix565(DEEP, rgb565(80, 170, 200), fadeIn * (0.35 + 0.65 * (y / 240)));
+    gfx.drawCircle(Math.round(x), Math.round(y), r, c);
+    gfx.fillRect(Math.round(x - r / 2), Math.round(y - r / 2), 1, 1, WHITE);
+  }
+
+  // 3. Two oxygen atoms drift in and bond: O + O -> O2
+  if (t < 1250) {
+    const a = easeOut(ramp(t, 100, 950)), pulse = ramp(t, 950, 1250);
+    for (let k = -1; k <= 1; k += 2) {
+      const x = 120 + k * (13 + 125 * (1 - a)), y = 120 + k * 40 * (1 - a) * (1 - a);
+      gfx.fillCircle(Math.round(x), Math.round(y), 16 + pulse * 6, mix565(rgb565(0, 60, 80), WHITE, pulse));
+      gfx.drawCircle(Math.round(x), Math.round(y), 16 + pulse * 6, C_ACCENT);
+      gfx.setTextSize(2); gfx.setTextColor(mix565(WHITE, C_ACCENT, pulse));
+      gfx.setCursor(Math.round(x) - 5, Math.round(y) - 7); gfx.print("O");
+    }
+  }
+  // 4. ...and burst into a shock ring
+  if (t >= 1200 && t < 1800) {
+    const f = ramp(t, 1200, 1800), rr = 20 + 96 * easeOut(f), c = mix565(WHITE, C_ACCENT, f);
+    for (let d = 0; d < 3; d++) gfx.drawCircle(120, 120, Math.round(rr) - d, mix565(c, DEEP, f * f));
+  }
+
+  // 5. Gauge ring sweeps round from the top, ticks light up behind it
+  if (t >= 1500) {
+    const p = easeOut(ramp(t, 1500, 2500));
+    gfx.fillArc(120, 120, 119, 113, 0, 360, rgb565(0, 30, 44));
+    gfx.fillArc(120, 120, 119, 113, 270, 270 + 360 * p, C_ACCENT);
+    for (let k = 0; k < 60; k++) {
+      if (k * 6 > 360 * p) break;
+      const ang = (270 + k * 6) * Math.PI / 180, r0 = k % 5 ? 107 : 103;
+      gfx.drawLine(Math.round(120 + r0 * Math.cos(ang)), Math.round(120 + r0 * Math.sin(ang)),
+        Math.round(120 + 109 * Math.cos(ang)), Math.round(120 + 109 * Math.sin(ang)), k % 5 ? C_DIM : C_ACCENT);
+    }
+    if (p < 1) {
+      const ang = (270 + 360 * p) * Math.PI / 180;
+      gfx.fillCircle(Math.round(120 + 116 * Math.cos(ang)), Math.round(120 + 116 * Math.sin(ang)), 5, WHITE);
+    }
+  }
+
+  // 6. The initials are traced in light, one after the other
+  const n = BOOT_INITIALS.length;
+  let cw = 40, gap = 14;
+  if (n * cw + (n - 1) * gap > 172) { gap = 10; cw = Math.trunc((172 - (n - 1) * gap) / n); }
+  const chh = Math.min(66, Math.trunc(cw * 1.65)), pen = Math.max(3, Math.trunc(cw * 5 / 40));
+  const x0 = 120 - Math.trunc((n * cw + (n - 1) * gap) / 2), y0 = 118 - chh;
+  const LT0 = 1700, LSTEP = 320, LDUR = 800;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < n; i++) {
+      const prog = easeOut(ramp(t, LT0 + i * LSTEP, LT0 + i * LSTEP + LDUR));
+      if (prog <= 0) continue;
+      const done = LT0 + i * LSTEP + LDUR, x = x0 + i * (cw + gap);
+      if (pass === 0) {
+        traceGlyph(glyph(BOOT_INITIALS[i]), x + pen, y0 + pen, cw - 2 * pen, chh - 2 * pen, prog, pen + 4, GLOW);
+      } else {
+        const col = mix565(WHITE, C_ACCENT, ramp(t, done, done + 600));
+        const [tx, ty] = traceGlyph(glyph(BOOT_INITIALS[i]), x + pen, y0 + pen, cw - 2 * pen, chh - 2 * pen, prog, pen, col);
+        if (prog < 1 && tx >= 0) { gfx.fillCircle(Math.round(tx), Math.round(ty), pen + 2, WHITE); sparkle(Math.round(tx), Math.round(ty), pen + 6, WHITE); }
+      }
+    }
+  }
+
+  // 7. Twinkles around the letters once they're finished
+  const tDone = LT0 + (n - 1) * LSTEP + LDUR;
+  for (let i = 0; i < 7; i++) {
+    const h = hash32(i * 104729 + 3), st = tDone - 200 + (h % 900);
+    const life = ramp(t, st, st + 500);
+    if (life <= 0 || life >= 1) continue;
+    const s = Math.round(1 + 5 * Math.sin(life * Math.PI));
+    sparkle(x0 - 6 + (h >>> 8) % (n * cw + (n - 1) * gap + 12), y0 - 8 + (h >>> 20) % (chh + 16), s, WHITE);
+  }
+
+  // 8. Title types itself out, then the dedication line fades in
+  const TT = tDone + 100, len = BOOT_TITLE.length;
+  const typed = Math.trunc(ramp(t, TT, TT + len * 45) * len);
+  if (typed > 0) typeText(BOOT_TITLE, 136, 2, C_FG, typed);
+  if (typed > 0 && typed < len && (Math.trunc(t / 80) & 1)) {
+    gfx.fillRect(120 - len * 6 + typed * 12, 136, 10, 14, C_ACCENT);
+  }
+  const lineF = ramp(t, TT + len * 45, TT + len * 45 + 500);
+  if (BOOT_LINE.length && lineF > 0) typeText(BOOT_LINE, 162, 1, mix565(DEEP, C_FG, lineF * 0.7), 99);
+
+  // 9. Iris closes to black
+  const iris = ramp(t, BOOT_MS - 550, BOOT_MS);
+  if (iris > 0) gfx.fillArc(120, 120, 121, Math.max(1, Math.round(121 * (1 - iris * iris))), 0, 360, C_BG);
+}
 
 /* ---------- Ported firmware ---------- */
 function drawSeg7(x, y, w, h, t, d, col) {
@@ -497,6 +678,7 @@ function setup() {
   adsOk = hw.adcWired;
   calMv = prefs.get("air");
   calO2Mv = prefs.get("o2");
+  booting = true; bootSkip = false;
 }
 
 function handleTouch() {
@@ -593,6 +775,19 @@ lcd.addEventListener("pointerdown", e => { hw.touching = true; lcd.setPointerCap
 lcd.addEventListener("contextmenu", e => e.preventDefault());
 
 /* ---------- Run ---------- */
+let booting = true, bootSkip = false;
+function bootStep() {
+  // Same rules as bootAnimation(): runs BOOT_MS, a tap skips it, then waits for the finger to lift
+  const t = millis();
+  if (t > 400 && hw.touching) bootSkip = true;
+  if (t >= BOOT_MS || bootSkip) {
+    if (hw.touching) return;
+    booting = false; gfx.fillScreen(C_BG);
+    bootAt = performance.now();
+    return;
+  }
+  drawBootFrame(t);
+}
 let lastT = performance.now();
 function step() {
   const now = performance.now();
@@ -600,7 +795,7 @@ function step() {
   lastT = now;
   const target = hw.cellAirMv * hw.gasO2 / AIR_O2;
   hw.cellMv += (target - hw.cellMv) * (1 - Math.exp(-dt / CELL_TAU_S));
-  loop();
+  if (booting) bootStep(); else loop();
   holdBar.style.width = touch.down && !touch.longDone ? `${Math.min(100, (millis() - touch.downAt) / 15)}%` : "0";
 }
 setup();

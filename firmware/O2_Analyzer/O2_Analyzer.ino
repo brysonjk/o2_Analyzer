@@ -266,6 +266,215 @@ void drawScreen() {
   gfx->flush();
 }
 
+/* ============================== Boot animation ============================== */
+// Bubbles rise, two oxygen atoms bond and burst into the gauge ring, then the
+// initials are traced in light. About 5 s; a tap skips it.
+#define BOOT_INITIALS "FSS"          // 1-5 letters or digits
+#define BOOT_TITLE    "O2 ANALYZER"
+#define BOOT_LINE     "DIVE SAFE"    // small line under the title ("" for none)
+#define BOOT_MS       5000
+
+// Stroke font on a 5 x 9 grid: each point is two digits "xy" (x 0-4 left to right, y 0-8 top to bottom),
+// consecutive points are joined, "/" lifts the pen.
+static const char *const FONT_AZ[] = {
+  "08 00 40 48/04 44", "00 30 41 43 34 04 34 45 47 38 08 00", "41 30 10 01 07 18 38 47", "00 20 42 46 28 08 00",
+  "40 00 08 48/04 24", "40 00 08/04 24", "41 30 10 01 07 18 38 47 44 24", "00 08/40 48/04 44", "00 40/20 28/08 48",
+  "40 47 38 18 07", "00 08/40 04 48", "00 08 48", "08 00 24 40 48", "08 00 48 40", "10 30 41 47 38 18 07 01 10",
+  "08 00 30 41 43 34 04", "10 30 41 47 38 18 07 01 10/26 48", "08 00 30 41 43 34 04 34 48",
+  "41 30 10 01 03 14 34 45 47 38 18 07", "00 40/20 28", "00 07 18 38 47 40", "00 28 40", "00 08 24 48 40",
+  "00 48/40 08", "00 24/40 24 28", "00 40 08 48"
+};
+static const char *const FONT_09[] = {
+  "10 30 41 47 38 18 07 01 10", "10 20 28", "01 10 30 41 43 08 48", "01 10 30 41 43 34 14 34 45 47 38 18 07",
+  "00 04 44/40 48", "40 00 04 34 45 47 38 08", "41 30 10 01 07 18 38 47 45 34 04", "00 40 28",
+  "10 30 41 43 34 14 03 01 10 14 34 45 47 38 18 07 05 14", "44 14 03 01 10 30 41 47 38 18 07"
+};
+
+static inline uint16_t rgb565(int r, int g, int b) { return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3); }
+static uint16_t mix565(uint16_t a, uint16_t b, float f) {
+  if (f <= 0) return a;
+  if (f >= 1) return b;
+  int ar = (a >> 11) & 31, ag = (a >> 5) & 63, ab = a & 31, br = (b >> 11) & 31, bg = (b >> 5) & 63, bb = b & 31;
+  return ((int)(ar + (br - ar) * f) << 11) | ((int)(ag + (bg - ag) * f) << 5) | (int)(ab + (bb - ab) * f);
+}
+static inline float clamp01(float x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+static inline float ramp(float t, float t0, float t1) { return clamp01((t - t0) / (t1 - t0)); }
+static inline float easeOut(float x) { x = 1 - x; return 1 - x * x * x; }
+static uint32_t hash32(uint32_t x) {
+  x ^= x >> 16; x *= 0x7feb352d; x ^= x >> 15; x *= 0x846ca68b; x ^= x >> 16; return x;
+}
+static const char *glyph(char c) {
+  if (c >= 'a' && c <= 'z') c -= 32;
+  if (c >= 'A' && c <= 'Z') return FONT_AZ[c - 'A'];
+  if (c >= '0' && c <= '9') return FONT_09[c - '0'];
+  return "";
+}
+
+// Draw the first `prog` (0..1) of a glyph with a round pen of radius r inside box x, y, w, h.
+// Returns the length drawn; the pen tip goes to *tx, *ty. Pass draw=false to only measure.
+static float traceGlyph(const char *g, float x, float y, float w, float h, float prog, int r, uint16_t col,
+                        float *tx, float *ty, bool draw = true) {
+  float left = prog, px = 0, py = 0, done = 0;
+  const float step = max(1.0f, r * 0.5f);
+  bool pen = false;
+  for (int i = 0; g[i];) {
+    if (g[i] == '/') { pen = false; i++; continue; }
+    if (g[i] == ' ') { i++; continue; }
+    float qx = x + (g[i] - '0') * w / 4, qy = y + (g[i + 1] - '0') * h / 8;
+    i += 2;
+    if (pen) {
+      if (left <= 0) break;
+      float L = hypotf(qx - px, qy - py), run = min(L, left);
+      if (draw) {
+        for (float s = 0; s < run; s += step)
+          gfx->fillCircle(lroundf(px + (qx - px) * s / L), lroundf(py + (qy - py) * s / L), r, col);
+        *tx = px + (qx - px) * run / L; *ty = py + (qy - py) * run / L;
+        gfx->fillCircle(lroundf(*tx), lroundf(*ty), r, col);
+      }
+      left -= L; done += run;
+    }
+    px = qx; py = qy; pen = true;
+  }
+  return done;
+}
+static void traceGlyphFrac(const char *g, float x, float y, float w, float h, float frac, int r, uint16_t col,
+                           float *tx, float *ty) {
+  float total = traceGlyph(g, x, y, w, h, 1e9, r, col, tx, ty, false);
+  traceGlyph(g, x, y, w, h, frac * total, r, col, tx, ty);
+}
+static void sparkle(int x, int y, int s, uint16_t col) {
+  gfx->fillRect(x - s, y, 2 * s + 1, 1, col);
+  gfx->fillRect(x, y - s, 1, 2 * s + 1, col);
+  if (s > 2) gfx->fillRect(x - 1, y - 1, 3, 3, col);
+}
+static void typeText(const char *s, int y, uint8_t size, uint16_t col, int n) {
+  gfx->setTextSize(size); gfx->setTextColor(col);
+  gfx->setCursor(120 - (int)strlen(s) * 6 * size / 2, y);
+  for (int i = 0; s[i] && i < n; i++) gfx->print(s[i]);
+}
+
+void drawBootFrame(uint32_t t) {
+  const uint16_t WHITE = 0xFFFF, GLOW = rgb565(0, 70, 96), DEEP = rgb565(0, 4, 18), SHALLOW = rgb565(0, 46, 78);
+  const float fadeIn = ramp(t, 0, 500);
+
+  // 1. Water: vertical gradient, lighter at the surface
+  for (int y = 0; y < 240; y += 6) gfx->fillRect(0, y, 240, 6, mix565(0, mix565(SHALLOW, DEEP, y / 240.0f), fadeIn));
+
+  // 2. Rising bubbles
+  for (int i = 0; i < 18; i++) {
+    uint32_t h = hash32(i * 7919 + 17);
+    int r = 2 + h % 5, speed = 30 + (h >> 8) % 50;
+    float y = 250 - fmodf(t * speed / 1000.0f + (h >> 16) % 260, 270);
+    float x = 20 + (h >> 4) % 200 + 5 * sinf(t * 0.004f + i);
+    uint16_t c = mix565(DEEP, rgb565(80, 170, 200), fadeIn * (0.35f + 0.65f * (y / 240)));
+    gfx->drawCircle(lroundf(x), lroundf(y), r, c);
+    gfx->fillRect(lroundf(x - r / 2.0f), lroundf(y - r / 2.0f), 1, 1, WHITE);
+  }
+
+  // 3. Two oxygen atoms drift in and bond: O + O -> O2
+  if (t < 1250) {
+    float a = easeOut(ramp(t, 100, 950)), pulse = ramp(t, 950, 1250);
+    for (int k = -1; k <= 1; k += 2) {
+      int x = lroundf(120 + k * (13 + 125 * (1 - a))), y = lroundf(120 + k * 40 * (1 - a) * (1 - a));
+      int r = 16 + pulse * 6;
+      gfx->fillCircle(x, y, r, mix565(rgb565(0, 60, 80), WHITE, pulse));
+      gfx->drawCircle(x, y, r, C_ACCENT);
+      gfx->setTextSize(2); gfx->setTextColor(mix565(WHITE, C_ACCENT, pulse));
+      gfx->setCursor(x - 5, y - 7); gfx->print("O");
+    }
+  }
+  // 4. ...and burst into a shock ring
+  if (t >= 1200 && t < 1800) {
+    float f = ramp(t, 1200, 1800);
+    int rr = lroundf(20 + 96 * easeOut(f));
+    uint16_t c = mix565(mix565(WHITE, C_ACCENT, f), DEEP, f * f);
+    for (int d = 0; d < 3; d++) gfx->drawCircle(120, 120, rr - d, c);
+  }
+
+  // 5. Gauge ring sweeps round from the top, ticks light up behind it
+  if (t >= 1500) {
+    float p = easeOut(ramp(t, 1500, 2500));
+    gfx->fillArc(120, 120, 119, 113, 0, 360, rgb565(0, 30, 44));
+    gfx->fillArc(120, 120, 119, 113, 270, 270 + 360 * p, C_ACCENT);
+    for (int k = 0; k < 60 && k * 6 <= 360 * p; k++) {
+      float ang = (270 + k * 6) * DEG_TO_RAD, ca = cosf(ang), sa = sinf(ang);
+      int r0 = k % 5 ? 107 : 103;
+      gfx->drawLine(lroundf(120 + r0 * ca), lroundf(120 + r0 * sa), lroundf(120 + 109 * ca), lroundf(120 + 109 * sa),
+                    k % 5 ? C_DIM : C_ACCENT);
+    }
+    if (p < 1) {
+      float ang = (270 + 360 * p) * DEG_TO_RAD;
+      gfx->fillCircle(lroundf(120 + 116 * cosf(ang)), lroundf(120 + 116 * sinf(ang)), 5, WHITE);
+    }
+  }
+
+  // 6. The initials are traced in light, one after the other
+  const char *ini = BOOT_INITIALS;
+  int n = strlen(ini), cw = 40, gap = 14;
+  if (n * cw + (n - 1) * gap > 172) { gap = 10; cw = (172 - (n - 1) * gap) / n; }
+  int chh = min(66, (int)(cw * 1.65f)), pen = max(3, cw * 5 / 40);
+  int x0 = 120 - (n * cw + (n - 1) * gap) / 2, y0 = 118 - chh;
+  const uint32_t LT0 = 1700, LSTEP = 320, LDUR = 800;
+  for (int pass = 0; pass < 2; pass++) {
+    for (int i = 0; i < n; i++) {
+      float prog = easeOut(ramp(t, LT0 + i * LSTEP, LT0 + i * LSTEP + LDUR));
+      if (prog <= 0) continue;
+      uint32_t done = LT0 + i * LSTEP + LDUR;
+      int x = x0 + i * (cw + gap);
+      float tx = -1, ty = -1;
+      if (pass == 0) {
+        traceGlyphFrac(glyph(ini[i]), x + pen, y0 + pen, cw - 2 * pen, chh - 2 * pen, prog, pen + 4, GLOW, &tx, &ty);
+      } else {
+        uint16_t col = mix565(WHITE, C_ACCENT, ramp(t, done, done + 600));
+        traceGlyphFrac(glyph(ini[i]), x + pen, y0 + pen, cw - 2 * pen, chh - 2 * pen, prog, pen, col, &tx, &ty);
+        if (prog < 1 && tx >= 0) {
+          gfx->fillCircle(lroundf(tx), lroundf(ty), pen + 2, WHITE);
+          sparkle(lroundf(tx), lroundf(ty), pen + 6, WHITE);
+        }
+      }
+    }
+  }
+
+  // 7. Twinkles around the letters once they're finished
+  const uint32_t tDone = LT0 + (n - 1) * LSTEP + LDUR;
+  for (int i = 0; i < 7; i++) {
+    uint32_t h = hash32(i * 104729 + 3);
+    float st = (float)tDone - 200 + h % 900, life = ramp(t, st, st + 500);
+    if (life <= 0 || life >= 1) continue;
+    int s = lroundf(1 + 5 * sinf(life * PI));
+    sparkle(x0 - 6 + (h >> 8) % (n * cw + (n - 1) * gap + 12), y0 - 8 + (h >> 20) % (chh + 16), s, WHITE);
+  }
+
+  // 8. Title types itself out, then the dedication line fades in
+  const uint32_t TT = tDone + 100;
+  int len = strlen(BOOT_TITLE);
+  int typed = ramp(t, TT, TT + len * 45) * len;
+  if (typed > 0) typeText(BOOT_TITLE, 136, 2, C_FG, typed);
+  if (typed > 0 && typed < len && ((t / 80) & 1)) gfx->fillRect(120 - len * 6 + typed * 12, 136, 10, 14, C_ACCENT);
+  float lineF = ramp(t, TT + len * 45, TT + len * 45 + 500);
+  if (strlen(BOOT_LINE) && lineF > 0) typeText(BOOT_LINE, 162, 1, mix565(DEEP, C_FG, lineF * 0.7f), 99);
+
+  // 9. Iris closes to black
+  float iris = ramp(t, BOOT_MS - 550, BOOT_MS);
+  if (iris > 0) gfx->fillArc(120, 120, 121, max(1, (int)lroundf(121 * (1 - iris * iris))), 0, 360, C_BG);
+}
+
+static bool fingerDown() {
+  uint8_t d[1];
+  return digitalRead(PIN_TP_INT) == LOW && touchRead(0x02, d, 1) && d[0] > 0;
+}
+
+void bootAnimation() {
+  uint32_t t0 = millis();
+  for (uint32_t t = 0; t < BOOT_MS; t = millis() - t0) {
+    if (t > 400 && fingerDown()) break;          // tap to skip
+    drawBootFrame(t);
+    gfx->flush();
+  }
+  for (uint32_t w = millis(); fingerDown() && millis() - w < 3000;) delay(20);   // don't let the skip tap change page
+  gfx->fillScreen(C_BG); gfx->flush();
+}
+
 /* ============================== Setup / loop ============================== */
 void setup() {
   Serial.begin(115200);
@@ -277,6 +486,8 @@ void setup() {
   pinMode(PIN_TP_RST, OUTPUT); digitalWrite(PIN_TP_RST, LOW); delay(10); digitalWrite(PIN_TP_RST, HIGH); delay(50);
   pinMode(PIN_TP_INT, INPUT_PULLUP);
   sdaRel(); sclRel();
+
+  bootAnimation();
 
   Wire.begin(PIN_ADS_SDA, PIN_ADS_SCL, 400000);
   adsOk = ads.begin(0x48, &Wire);

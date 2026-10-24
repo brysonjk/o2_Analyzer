@@ -41,7 +41,8 @@ Other R-22D-type sensors may differ slightly, so check them against yours. Only 
 - `plug_clear` — the space behind the sensor for the Molex plug and its wire bend (11 mm).
 - `pcb_d`, `pcb_tab_w`, `pcb_tab_r`: the board outline, a 37 mm circle plus a 14.23 mm tab at the USB-C end, 38.5 mm overall, from the board's spec drawing.
 - `glass_d`, `glass_stack`, `comp_h` — display glass diameter, glass-to-PCB height, and the tallest component under the PCB.
-- `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach` — where the USB-C port and the on/off button sit, and how far in the button nub reaches.
+- `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach`: where the USB-C port and the on/off switch sit, and how far in the button nub reaches. Angles are measured looking at the display side: 0° is right, 270° is the USB-C end, and 180° puts the switch on the left.
+- `pad_angles`: where the three board support pads go. Check that the back of your board has no parts at its edge at 30°, 150° and 300°.
 - `batt_*` — the battery size. The default is a 602030 (6×20×30 mm, ≈300 mAh). The pocket must fit inside `spigot_id` (37 mm), which allows a diagonal of up to ~36.5 mm.
 - `ads_zone` — 3.8 mm for the ADS1115 with its wires soldered flat. Raise it if your wiring stands taller.
 
@@ -68,7 +69,7 @@ The body prints spigot-down, so its thread starts on the build plate. Turn on yo
 - A Molex mating pigtail for the sensor (sold as an "R-22 sensor cable" or a Molex KK 2.54 3-pin housing). Silicone-insulated wire is best, because it flexes the most as the cap turns.
 - A 1S LiPo, 602030 or similar, with a JST-1.25 2-pin plug
 - A short JST-1.25 2-pin extension (male/female). The battery-side plug then sits in the battery bay, so you can swap the battery without opening the top.
-- A JST-SH 1.0 mm 4-pin pigtail for the board's UART port
+- Four thin wires (about 28–30 AWG silicone) soldered to the board's 4-pin SH 1.0 connector. There's no room in the body for a plug in that side-entry connector, so solder the wires directly to its pins, or remove the connector and solder to its pads.
 - Optional: 2× 100 kΩ resistors and a 100 nF capacitor for the battery gauge
 
 No screws are needed.
@@ -76,10 +77,10 @@ No screws are needed.
 ## Wiring
 | From | To | Notes |
 |---|---|---|
-| Board JST-SH **3V3** | ADS1115 VDD | |
-| Board JST-SH **GND** | ADS1115 GND **and** ADDR | ADDR to GND sets I2C address 0x48 |
-| Board JST-SH **RX (GPIO20)** | ADS1115 SDA | The C3 lets you route I2C to any pin. The breakout already has pull-ups. |
-| Board JST-SH **TX (GPIO21)** | ADS1115 SCL | |
+| Board SH-connector pin **3V3** | ADS1115 VDD | Solder to the pins, no plug (see the bill of materials) |
+| Board SH-connector pin **GND** | ADS1115 GND **and** ADDR | ADDR to GND sets I2C address 0x48 |
+| Board SH-connector pin **RX (GPIO20)** | ADS1115 SDA | The C3 lets you route I2C to any pin. The breakout already has pull-ups. |
+| Board SH-connector pin **TX (GPIO21)** | ADS1115 SCL | |
 | Sensor **+** | ADS1115 A0 | |
 | Sensor **−** | ADS1115 A1 **and** GND | Grounding the − lead gives the cell a reference so it doesn't float |
 | Battery + → 100k → A2 → 100k → GND | ADS1115 A2 | Optional battery gauge. Put 100 nF across the lower resistor. Set `BATT_DIVIDER 0` in the sketch if you skip it. |
@@ -91,7 +92,7 @@ The board's on/off button drives its IP5306 power chip. Press once to turn on; d
 
 ## Assembly
 1. Solder the wires to the ADS1115. Seat it in the floor recess with double-sided foam tape, then feed the sensor and battery leads down through the two floor holes. Leave the sensor leads about 3 cm longer than the straight run. The cap turns a little under one turn, and that slack takes up the twist.
-2. Plug the JST-SH pigtail and the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The power button lines up with the flexible tab in the wall.
+2. Solder the four ADS1115 wires to the board's SH connector pins, at the lower right with the display facing you, and plug the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall. Three small pads under the board's edge support it; they sit where the back of the board has no parts at the edge.
 3. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. Snug by hand is enough. There's a gap in the rim's thread at the USB-C end, where the display's tab passes through; that's normal.
 4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
 5. Plug the Molex into the back of the sensor. Drop the sensor nose-first into the cap so its shoulder sits on the floor and the O-ring presses into the floor hole. The threaded nose sticks out underneath.

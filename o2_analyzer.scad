@@ -40,7 +40,9 @@ view_d         = 33.0;   // visible window (active area ≈ Ø32.4)
 usb_angle      = 270;
 usb_w          = 9.6;
 usb_h          = 3.8;
-btn_angle      = 0;      // IP5306 on/off button (side-actuated)
+btn_angle      = 180;    // IP5306 on/off switch: left edge with the display facing you, USB-C down
+sh_angle       = 332;    // 4-pin SH 1.0 connector (lower right); wires are soldered to it, no plug
+pad_angles     = [30, 150, 300];   // PCB support pads: clear of USB-C, switch, SH connector, ESP module
 btn_z_off      = 1.6;    // button centre below PCB bottom face
 btn_reach      = 19.4;   // radius the flexure nub reaches in to (switch sits at the 37 mm board edge)
 
@@ -237,11 +239,11 @@ module body() {
     // flexure button nub
     rotate([0, 0, btn_angle]) button_nub();
 
-    // PCB support pads in the cavity (3 pads, skip USB + button sectors)
-    for (a = [usb_angle + 120, usb_angle + 240, usb_angle + 60])
-        if (abs(((a - btn_angle + 540) % 360) - 180) > 20)
-        rotate([0, 0, a]) translate([pcb_d/2 - 1.2, -2, z_cav0])
-            cube([cav_bore/2 - pcb_d/2 + 1.4, 4, z_pcb - z_cav0]);     // 1.2 mm under the board edge
+    // PCB support pads in the cavity: 3 mm wide, 1.2 mm under the board edge,
+    // placed where the back of the board has no parts at its edge
+    for (a = pad_angles)
+        rotate([0, 0, a]) translate([pcb_d/2 - 1.2, -1.5, z_cav0])
+            cube([cav_bore/2 - pcb_d/2 + 1.4, 3, z_pcb - z_cav0]);
 
     // battery latches: two spring beams inside the spigot
     for (m = [0, 1]) mirror([m, 0, 0]) battery_latch();

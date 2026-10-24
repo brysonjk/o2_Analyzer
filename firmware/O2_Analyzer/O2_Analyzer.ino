@@ -8,17 +8,17 @@
  * Board: "ESP32C3 Dev Module", USB CDC On Boot: Enabled, Flash 4MB.
  *
  * Controls (touch screen):
- *   LONG PRESS  : main page   -> calibrate to air (20.9 %) — do it in fresh air, sensor settled
- *                 detail page -> power off (deep sleep; touch the screen to wake)
+ *   LONG PRESS  : on the main page, calibrate to air (20.9 %) — do it in fresh air, sensor settled
  *   TAP         : switch between main page and detail page (mV, cal, MOD)
- * Serial (115200): 'c' = calibrate to air, 'o' = calibrate to 100 % O2, 'r' = reset cal, 'p' = power off
+ * Serial (115200): 'c' = calibrate to air, 'o' = calibrate to 100 % O2, 'r' = reset cal
+ * Power: the side button drives the IP5306 — short press turns on, hold 10 s turns off.
  */
 
 #include <Arduino_GFX_Library.h>
 #include <Adafruit_ADS1X15.h>
 #include <Wire.h>
 #include <Preferences.h>
-#include <esp_sleep.h>
+#include "boot_logo.h"
 
 /* ---------- ESP32-2424S012 pins (verify against your board) ---------- */
 #define PIN_TFT_DC    2
@@ -252,7 +252,6 @@ void drawScreen() {
     if (calO2Mv > 0) { snprintf(l, sizeof l, "O2 cal %.2f mV", calO2Mv); centerText(l, 130, 1, C_DIM); }
     snprintf(l, sizeof l, "%.1f %%", o2Now);              centerText(valid ? l : "--", 146, 2, C_FG);
     if (BATT_DIVIDER > 0) { snprintf(l, sizeof l, "batt %.2f V", battV); centerText(l, 172, 1, C_DIM); }
-    centerText("HOLD: POWER OFF", 186, 1, C_DIM);
   }
 
   // status line
@@ -270,12 +269,16 @@ void drawScreen() {
 }
 
 /* ============================== Boot animation ============================== */
-// Bubbles rise, two oxygen atoms bond and burst into the gauge ring, then the
-// initials are traced in light. About 5 s; a tap skips it.
+// The logo fades in and holds, then cross-fades into the animation: bubbles rise,
+// two oxygen atoms bond and burst into the gauge ring, then the initials are traced
+// in light. About 8 s in all; a tap skips it.
 #define BOOT_INITIALS "FSS"          // 1-5 letters or digits
 #define BOOT_TITLE    "O2 ANALYZER"
 #define BOOT_LINE     "DIVE SAFE"    // small line under the title ("" for none)
 #define BOOT_MS       5000
+#define LOGO_MS       3000           // logo on screen (fade-in + hold) before the cross-fade starts
+#define LOGO_IN_MS    400
+#define LOGO_XFADE_MS 800            // overlaps the first LOGO_XFADE_MS of the animation
 
 // Stroke font on a 5 x 9 grid: each point is two digits "xy" (x 0-4 left to right, y 0-8 top to bottom),
 // consecutive points are joined, "/" lifts the pen.
@@ -467,38 +470,35 @@ static bool fingerDown() {
   return digitalRead(PIN_TP_INT) == LOW && touchRead(0x02, d, 1) && d[0] > 0;
 }
 
+// Blend the logo over what's in the canvas: f = 1 shows only the logo, f = 0 leaves the canvas.
+static void blendLogo(float f) {
+  uint16_t *fb = ((Arduino_Canvas *)gfx)->getFramebuffer();
+  int w = lroundf(clamp01(f) * 256);
+  if (w == 0) return;
+  for (int i = 0; i < BOOT_LOGO_W * BOOT_LOGO_H; i++) {
+    uint16_t a = BOOT_LOGO[i], b = fb[i];
+    int r = (((a >> 11) & 31) * w + ((b >> 11) & 31) * (256 - w)) >> 8;
+    int g = (((a >> 5) & 63) * w + ((b >> 5) & 63) * (256 - w)) >> 8;
+    int bl = ((a & 31) * w + (b & 31) * (256 - w)) >> 8;
+    fb[i] = (r << 11) | (g << 5) | bl;
+  }
+}
+
 void bootAnimation() {
   uint32_t t0 = millis();
-  for (uint32_t t = 0; t < BOOT_MS; t = millis() - t0) {
+  for (uint32_t t = 0; t < LOGO_MS + BOOT_MS; t = millis() - t0) {
     if (t > 400 && fingerDown()) break;          // tap to skip
-    drawBootFrame(t);
+    if (t < LOGO_MS) {
+      gfx->fillScreen(C_BG);
+      blendLogo(ramp(t, 0, LOGO_IN_MS));
+    } else {
+      drawBootFrame(t - LOGO_MS);
+      blendLogo(1 - ramp(t, LOGO_MS, LOGO_MS + LOGO_XFADE_MS));
+    }
     gfx->flush();
   }
   for (uint32_t w = millis(); fingerDown() && millis() - w < 3000;) delay(20);   // don't let the skip tap change page
   gfx->fillScreen(C_BG); gfx->flush();
-}
-
-/* ============================== Power off ============================== */
-// The board's side button goes to its IP5306 power chip, and the firmware can't cut
-// the battery itself. Instead it blanks the screen and puts the ESP32 into deep sleep.
-// The current then drops low enough that the IP5306's light-load shutdown should
-// switch the board fully off after ~30 s; the button turns it on again. If the board
-// is still powered, touching the screen wakes it, which restarts the firmware.
-void powerOff() {
-  gfx->fillScreen(C_BG);
-  centerText("POWERING OFF", 104, 2, C_FG);
-  centerText("touch screen to wake", 132, 1, C_DIM);
-  gfx->flush();
-  for (uint32_t w = millis(); fingerDown() && millis() - w < 5000;) delay(20);   // let go first
-  delay(1200);
-  for (int b = 255; b >= 0; b -= 15) { analogWrite(PIN_TFT_BL, b); delay(15); }  // fade the backlight out
-  gfx->fillScreen(C_BG); gfx->flush();
-  panel->displayOff();
-  Serial.println("power off: deep sleep");
-  Serial.flush();
-  pinMode(PIN_TP_INT, INPUT_PULLUP);
-  esp_deep_sleep_enable_gpio_wakeup(1ULL << PIN_TP_INT, ESP_GPIO_WAKEUP_GPIO_LOW);   // CST816 INT goes low on touch
-  esp_deep_sleep_start();
 }
 
 /* ============================== Setup / loop ============================== */
@@ -536,7 +536,7 @@ void handleTouch() {
   if (finger && !down) { down = true; downAt = millis(); longDone = false; }
   else if (finger && down && !longDone && millis() - downAt > 1500) {
     longDone = true;
-    if (page == 0) calibrateAir(); else powerOff();
+    if (page == 0) calibrateAir();
   }
   else if (!finger && down) {
     down = false;
@@ -575,7 +575,6 @@ void loop() {
     if (c == 'c') calibrateAir();
     if (c == 'o') calibrateO2();
     if (c == 'r') { calMv = 0; calO2Mv = 0; saveCal(); flash("CAL RESET"); }
-    if (c == 'p') powerOff();
   }
 
   if (millis() - tDraw >= 250) {

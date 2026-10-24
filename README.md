@@ -91,11 +91,11 @@ No screws are needed.
 
 **Sensor polarity:** pinouts differ between brands. With a multimeter in air, find the pin pair that reads +8 to +14 mV. The red probe is on **+**, and the third pin is unused.
 
-The board's side button drives its IP5306 power chip: one press turns it on. A double-press is supposed to turn it off, but that hasn't worked on a real unit, so the firmware has its own power-off.
+The board's side button drives its IP5306 power chip:
+- **On:** a short press.
+- **Off:** hold the button for about **10 seconds**, until the screen goes dark. This is a true off: the power chip disconnects the board, so a charged battery keeps for months in storage.
 
-**To turn it off:** tap the screen to open the detail page, then hold the screen for 1.5 s (or send `p` on the serial console). The screen shows POWERING OFF and goes dark, and the ESP32 drops into deep sleep. That cuts the draw low enough that the IP5306 should shut the board off by itself after about 30 s; press the side button to turn it back on. Before that happens, touching the screen wakes it.
-
-If the board stays powered in deep sleep (for example, if this IP5306 has its auto-off disabled), it still draws a small current and will slowly drain the battery over days. Unplug the battery for long-term storage.
+The IP5306 on these boards appears to be a factory-configured variant that doesn't behave like the datasheet describes: a double-press doesn't turn it off, it doesn't switch itself off at light load, and it isn't reachable over I2C, so the firmware can't power the board down.
 
 USB-C charges the battery and programs the board. While USB is plugged in, the board stays powered.
 
@@ -118,11 +118,14 @@ Install the **GFX Library for Arduino** (moononournation) and **Adafruit ADS1X15
 ### Startup animation
 ![Startup animation](firmware/boot_animation.gif)
 
-At power-on, bubbles rise and two oxygen atoms drift together and bond. The pair bursts into the gauge ring, and the initials are then traced in light, followed by the title and a dedication line. It lasts about 5 s; tap the screen to skip it. To personalise it, edit the defines above `drawBootFrame()` in the sketch:
+At power-on, the Dark Water Diving logo fades in and holds for about 3 s, then cross-fades into the animation: bubbles rise and two oxygen atoms drift together and bond. The pair bursts into the gauge ring, and the initials are then traced in light, followed by the title and a dedication line. The whole intro lasts about 8 s; tap the screen to skip it. To personalise it, edit the defines above `drawBootFrame()` in the sketch:
 - `BOOT_INITIALS` takes 1–5 letters or digits (default `"FSS"`).
 - `BOOT_TITLE` is the title line.
 - `BOOT_LINE` is the small line under the title (`""` hides it).
-- `BOOT_MS` sets the length.
+- `BOOT_MS` sets the length of the animation.
+- `LOGO_MS`, `LOGO_IN_MS` and `LOGO_XFADE_MS` set how long the logo shows, its fade-in, and the cross-fade.
+
+To change the logo, replace `firmware/assets/boot_logo.png` (any size, ideally square; transparent areas become black) and run `python3 firmware/tools/png2rgb565.py firmware/assets/boot_logo.png`. This regenerates `firmware/O2_Analyzer/boot_logo.h` for the sketch and `simulator/boot_logo.png` for the simulator. Pass `--diameter` to change its size on the 240 px display (default 232, which keeps the edge clear of the bezel).
 
 The simulator plays the same animation, so you can preview a change there first; change the constants at the top of its boot-animation block to match.
 
@@ -136,9 +139,8 @@ The display shows:
 
 The controls are:
 - **Long-press** on the main page to calibrate to 20.9 % air.
-- **Long-press** on the detail page to power off.
 - **Tap** to switch to the detail page (raw mV and calibration values).
-- On the serial console, `c` calibrates to air, `o` calibrates to 100 % O2 (optional second point), `r` resets calibration, and `p` powers off.
+- On the serial console, `c` calibrates to air, `o` calibrates to 100 % O2 (optional second point), and `r` resets calibration.
 
 Calibration is saved in flash. Recalibrate before each use, as you would with any analyzer.
 

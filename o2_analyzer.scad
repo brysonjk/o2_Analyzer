@@ -42,8 +42,12 @@ view_d         = 37.0;   // bezel window: the flat part of the cover glass
 // USB-C and on/off button positions (angle measured CCW looking from top,
 // 0° = +X).  Rotate these to match YOUR board.
 usb_angle      = 270;
+usb_off        = -2.6;   // USB-C sits 2.6 mm left of the tab centreline with the display
+                         //   facing you (measured from the back-of-board photo, mirrored)
 usb_w          = 9.6;
 usb_h          = 3.8;
+usb_plug_w     = 12.8;   // USB-C plug overmould, for the recess outside the slot
+usb_plug_h     = 6.2;
 btn_angle      = 180;    // IP5306 on/off switch: left edge with the display facing you, USB-C down
 sh_angle       = 332;    // 4-pin SH 1.0 connector (lower right); wires are soldered to it, no plug
 pad_angles     = [30, 150, 300];   // PCB support pads: clear of USB-C, switch, SH connector, ESP module
@@ -86,6 +90,7 @@ ads_zone       = 3.8;    // free height for ADS board + soldered wires
 /* ---------- Enclosure ---------- */
 od             = 46.0;
 fit            = 0.30;   // general radial clearance
+tab_clear      = 0.7;    // radial room along the sides and end of the PCB's USB-C tab
 disp_clear     = 0.5;    // radial room around the display board (printed holes shrink 0.2-0.3)
 sw_protrude    = 0.4;    // the on/off switch sticks out past the board's 37 mm edge
 sw_notch_w     = 5.0;    // width of the channel for it down the inside of the rim
@@ -218,22 +223,21 @@ module body() {
         translate([0, 0, z_cav0]) cylinder(d = cav_bore, h = z_pcb - z_cav0 + eps);
         translate([-ads_l/2, -ads_w/2 - 3, z_cav0 - 0.6]) cube([ads_l, ads_w, 1]);
 
-        // display seat: the round board plus a pocket for its USB-C tab, with a
-        // channel through the rim so the tab and connector can be lowered in
-        translate([0, 0, z_pcb]) cylinder(d = disp_bore, h = body_h);
-        translate([0, 0, z_pcb - eps]) linear_extrude(body_h - z_pcb + 1) pcb_tab_2d(disp_clear);
-        translate([0, 0, z_rim0 - eps]) linear_extrude(rim_h + 1) rotate([0, 0, usb_angle - 270])
-            translate([-pcb_tab_w/2 - disp_clear, -od/2 - 1]) square([pcb_tab_w + 2*disp_clear, od/2 + 1]);
+        // display seat: the round board and its USB-C tab, joined by a smooth
+        // taper (the board's outline flares where the tab meets the circle).
+        // It stays inside the rim thread's root, so the rim is unbroken.
+        translate([0, 0, z_pcb - eps]) linear_extrude(body_h - z_pcb + 1) seat_2d();
         // channel for the on/off switch, which sticks out past the board edge
         rotate([0, 0, btn_angle]) translate([pcb_d/2 - 1, -sw_notch_w/2, z_pcb - btn_z_off - 1.5])
             cube([sw_protrude + disp_clear + 1.4, sw_notch_w, body_h - z_pcb + btn_z_off + 3]);
 
         // USB-C slot (opening flares outward for the plug overmould)
-        rotate([0, 0, usb_angle]) translate([od/2 - 3.5, 0, z_pcb - usb_h/2 - 0.2]) {
-            rotate([0, 90, 0]) linear_extrude(4) offset(r = 1.2) offset(delta = -1.2)
-                square([usb_h + 0.6, usb_w + 0.6], center = true);
-            translate([2.2, 0, 0]) rotate([0, 90, 0]) linear_extrude(3) offset(r = 2)
-                square([usb_h + 3, usb_w + 3.4], center = true);
+        rotate([0, 0, usb_angle]) translate([od/2 - 4.5, usb_off, z_pcb - usb_h/2 - 0.2]) {
+            rotate([0, 90, 0]) linear_extrude(5) offset(r = 0.8) offset(delta = -0.8)
+                square([usb_h + 1.0, usb_w + 0.8], center = true);
+            // recess for the plug's overmould (6.2 x 12.8), kept below the bezel thread
+            translate([3.2, 0, 0]) rotate([0, 90, 0]) linear_extrude(3) offset(r = 1) offset(delta = -1)
+                square([usb_plug_h, usb_plug_w], center = true);
         }
 
         // flexure power button: U-slot through the wall + thinned tab
@@ -269,6 +273,11 @@ module body() {
 module sector(r0, r1, a0, a1, z0, z1) {
     translate([0, 0, z0]) rotate([0, 0, a0])
         rotate_extrude(angle = a1 - a0, $fn = 192) translate([r0, 0]) square([r1 - r0, z1 - z0]);
+}
+
+// display seat outline: board circle + tab, hulled so the junction flares
+module seat_2d() {
+    hull() { circle(d = disp_bore, $fn = 192); offset(r = tab_clear, $fn = 32) pcb_tab_2d(0); }   // rounded corners keep 0.6 mm of rim wall
 }
 
 // the PCB's tab, as a 2D outline grown by `off`
@@ -404,8 +413,7 @@ module fit_test() {
                             // with the cover-glass pocket as a step on top
         cylinder(d = glass_pocket_d + 4, h = 3.5);
         translate([0, 0, 2]) cylinder(d = glass_pocket_d, h = 2);
-        translate([0, 0, -eps]) cylinder(d = disp_bore, h = 3);
-        translate([0, 0, -eps]) linear_extrude(3) pcb_tab_2d(disp_clear);
+        translate([0, 0, -eps]) linear_extrude(3) seat_2d();
         rotate([0, 0, btn_angle]) translate([pcb_d/2 - 1, -sw_notch_w/2, -eps]) cube([sw_protrude + disp_clear + 1.4, sw_notch_w, 3]);
     }
     // sensor seat: the cap floor (O-ring hole) with the body bore above it.
@@ -449,7 +457,7 @@ module dummy_display() {
         [0, 0], [cover_d/2, 0], [cover_d/2, cover_edge_t],
         [cover_d/2 - cover_bevel_w, cover_t], [0, cover_t]]);
     color("royalblue") translate([0, 0, cover_under + cover_t - 0.05]) cylinder(d = 32.4, h = 0.1);
-    color("gray") rotate([0, 0, usb_angle]) translate([pcb_tab_r - 7.3, -4.5, -3.2]) cube([7.3, 9, 3.2]);
+    color("gray") rotate([0, 0, usb_angle]) translate([pcb_tab_r - 7.3, usb_off - 4.5, -3.2]) cube([7.3, 9, 3.2]);
 }
 
 /* ============================ Output ================================= */

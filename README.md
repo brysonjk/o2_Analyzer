@@ -41,6 +41,7 @@ Other R-22D-type sensors may differ slightly, so check them against yours. Only 
 - `plug_clear` — the space behind the sensor for the Molex plug and its wire bend (11 mm).
 - `pcb_d`, `pcb_tab_w`, `pcb_tab_r`: the board outline, a 37 mm circle plus a 14.23 mm tab at the USB-C end, 38.5 mm overall, from the board's spec drawing. The board has a factory **42 mm cover glass** (1.75 mm thick, bevelled to 0.5 mm over its outer 2 mm, underside 3.3 mm above the back of the board) that overhangs the board. It sits in a 42.6 mm pocket at the top of the body (`cover_d`, `cover_t`, `cover_under`), which is why the rim and bezel are wider than the rest of the body. The on/off switch sticks out about 0.4 mm past the board edge (`sw_protrude`) and has its own channel down the rim.
 - `glass_d`, `glass_stack`, `comp_h` — display glass diameter, glass-to-PCB height, and the tallest component under the PCB.
+- `usb_off`: the USB-C connector sits 2.6 mm left of the tab's centre with the display facing you (−2.6).
 - `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach`: where the USB-C port and the on/off switch sit, and how far in the button nub reaches. Angles are measured looking at the display side: 0° is right, 270° is the USB-C end, and 180° puts the switch on the left.
 - `pad_angles`: where the three board support pads go. Check that the back of your board has no parts at its edge at 30°, 150° and 300°.
 - `batt_*` — the battery size. The default is a 602030 (6×20×30 mm, ≈300 mAh). The pocket must fit inside `spigot_id` (37 mm), which allows a diagonal of up to ~36.5 mm.
@@ -58,6 +59,7 @@ The body prints spigot-down, so its thread starts on the build plate. Turn on yo
 | Battery latches | `latch_hook` (1.0) | 0.8 | 1.2 |
 | Body/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
 | Display board in the body | `disp_clear` (0.5) | 0.7 | 0.3 |
+| Board's USB-C tab in the body | `tab_clear` (0.7) | 0.9 | 0.5 |
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
 | O-ring seal in the cap floor | `oring_squeeze` (0.2) | 0.15 | 0.25 |
 | Bezel thread | `bz_clear` (0.30) | 0.4 | 0.2 |
@@ -94,7 +96,7 @@ The board's on/off button drives its IP5306 power chip. Press once to turn on; d
 ## Assembly
 1. Solder the wires to the ADS1115. Seat it in the floor recess with double-sided foam tape, then feed the sensor and battery leads down through the two floor holes. Leave the sensor leads about 3 cm longer than the straight run. The cap turns a little under one turn, and that slack takes up the twist.
 2. Solder the four ADS1115 wires to the board's SH connector pins, at the lower right with the display facing you, and plug the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The 42 mm cover glass settles into the pocket at the top, level with the rim. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall. Three small pads under the board's edge support it; they sit where the back of the board has no parts at the edge.
-3. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. It sits just above the cover glass, so the glass and board can't lift, and its window shows the flat part of the glass. Snug by hand is enough. There's a gap in the rim's thread at the USB-C end, where the display's tab passes through; that's normal.
+3. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. It sits just above the cover glass, so the glass and board can't lift, and its window shows the flat part of the glass. Snug by hand is enough.
 4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
 5. Plug the Molex into the back of the sensor. Drop the sensor nose-first into the cap so its shoulder sits on the floor and the O-ring presses into the floor hole. The threaded nose sticks out underneath.
 6. Screw the cap onto the body. It takes a little under one turn.

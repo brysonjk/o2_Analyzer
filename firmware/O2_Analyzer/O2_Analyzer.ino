@@ -8,15 +8,17 @@
  * Board: "ESP32C3 Dev Module", USB CDC On Boot: Enabled, Flash 4MB.
  *
  * Controls (touch screen):
- *   LONG PRESS  : calibrate to air (20.9 %) — do it in fresh air, sensor settled
+ *   LONG PRESS  : main page   -> calibrate to air (20.9 %) — do it in fresh air, sensor settled
+ *                 detail page -> power off (deep sleep; touch the screen to wake)
  *   TAP         : switch between main page and detail page (mV, cal, MOD)
- * Serial (115200): 'c' = calibrate to air, 'o' = calibrate to 100 % O2, 'r' = reset cal
+ * Serial (115200): 'c' = calibrate to air, 'o' = calibrate to 100 % O2, 'r' = reset cal, 'p' = power off
  */
 
 #include <Arduino_GFX_Library.h>
 #include <Adafruit_ADS1X15.h>
 #include <Wire.h>
 #include <Preferences.h>
+#include <esp_sleep.h>
 
 /* ---------- ESP32-2424S012 pins (verify against your board) ---------- */
 #define PIN_TFT_DC    2
@@ -250,12 +252,13 @@ void drawScreen() {
     if (calO2Mv > 0) { snprintf(l, sizeof l, "O2 cal %.2f mV", calO2Mv); centerText(l, 130, 1, C_DIM); }
     snprintf(l, sizeof l, "%.1f %%", o2Now);              centerText(valid ? l : "--", 146, 2, C_FG);
     if (BATT_DIVIDER > 0) { snprintf(l, sizeof l, "batt %.2f V", battV); centerText(l, 172, 1, C_DIM); }
+    centerText("HOLD: POWER OFF", 186, 1, C_DIM);
   }
 
   // status line
   const char *st; uint16_t sc;
   if (!adsOk)                  { st = "NO ADC";       sc = C_BAD; }
-  else if (calMv <= 0)         { st = "HOLD: CAL AIR"; sc = C_WARN; }
+  else if (calMv <= 0)         { st = page ? "NOT CALIBRATED" : "HOLD: CAL AIR"; sc = C_WARN; }
   else if (mvNow < 0.3)        { st = "NO SENSOR";    sc = C_BAD; }
   else if (sensorWeak)         { st = "SENSOR WEAK";  sc = C_WARN; }
   else if (stable)             { st = "STABLE";       sc = C_OK; }
@@ -475,6 +478,29 @@ void bootAnimation() {
   gfx->fillScreen(C_BG); gfx->flush();
 }
 
+/* ============================== Power off ============================== */
+// The board's side button goes to its IP5306 power chip, and the firmware can't cut
+// the battery itself. Instead it blanks the screen and puts the ESP32 into deep sleep.
+// The current then drops low enough that the IP5306's light-load shutdown should
+// switch the board fully off after ~30 s; the button turns it on again. If the board
+// is still powered, touching the screen wakes it, which restarts the firmware.
+void powerOff() {
+  gfx->fillScreen(C_BG);
+  centerText("POWERING OFF", 104, 2, C_FG);
+  centerText("touch screen to wake", 132, 1, C_DIM);
+  gfx->flush();
+  for (uint32_t w = millis(); fingerDown() && millis() - w < 5000;) delay(20);   // let go first
+  delay(1200);
+  for (int b = 255; b >= 0; b -= 15) { analogWrite(PIN_TFT_BL, b); delay(15); }  // fade the backlight out
+  gfx->fillScreen(C_BG); gfx->flush();
+  panel->displayOff();
+  Serial.println("power off: deep sleep");
+  Serial.flush();
+  pinMode(PIN_TP_INT, INPUT_PULLUP);
+  esp_deep_sleep_enable_gpio_wakeup(1ULL << PIN_TP_INT, ESP_GPIO_WAKEUP_GPIO_LOW);   // CST816 INT goes low on touch
+  esp_deep_sleep_start();
+}
+
 /* ============================== Setup / loop ============================== */
 void setup() {
   Serial.begin(115200);
@@ -508,7 +534,10 @@ void handleTouch() {
   if (!touchRead(0x02, d, 1)) { if (down) { down = false; } return; }
   bool finger = d[0] > 0;
   if (finger && !down) { down = true; downAt = millis(); longDone = false; }
-  else if (finger && down && !longDone && millis() - downAt > 1500) { longDone = true; calibrateAir(); }
+  else if (finger && down && !longDone && millis() - downAt > 1500) {
+    longDone = true;
+    if (page == 0) calibrateAir(); else powerOff();
+  }
   else if (!finger && down) {
     down = false;
     if (!longDone && millis() - downAt < 600) page ^= 1;
@@ -546,6 +575,7 @@ void loop() {
     if (c == 'c') calibrateAir();
     if (c == 'o') calibrateO2();
     if (c == 'r') { calMv = 0; calO2Mv = 0; saveCal(); flash("CAL RESET"); }
+    if (c == 'p') powerOff();
   }
 
   if (millis() - tDraw >= 250) {

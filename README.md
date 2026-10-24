@@ -91,7 +91,13 @@ No screws are needed.
 
 **Sensor polarity:** pinouts differ between brands. With a multimeter in air, find the pin pair that reads +8 to +14 mV. The red probe is on **+**, and the third pin is unused.
 
-The board's on/off button drives its IP5306 power chip. Press once to turn on; double-press to turn off. USB-C charges the battery and programs the board. The IP5306 can switch itself off if the load drops very low, but the display backlight keeps the draw well above that level.
+The board's side button drives its IP5306 power chip: one press turns it on. A double-press is supposed to turn it off, but that hasn't worked on a real unit, so the firmware has its own power-off.
+
+**To turn it off:** tap the screen to open the detail page, then hold the screen for 1.5 s (or send `p` on the serial console). The screen shows POWERING OFF and goes dark, and the ESP32 drops into deep sleep. That cuts the draw low enough that the IP5306 should shut the board off by itself after about 30 s; press the side button to turn it back on. Before that happens, touching the screen wakes it.
+
+If the board stays powered in deep sleep (for example, if this IP5306 has its auto-off disabled), it still draws a small current and will slowly drain the battery over days. Unplug the battery for long-term storage.
+
+USB-C charges the battery and programs the board. While USB is plugged in, the board stays powered.
 
 ## Assembly
 1. Solder the wires to the ADS1115. Seat it in the floor recess with double-sided foam tape, then feed the sensor and battery leads down through the two floor holes. Leave the sensor leads about 3 cm longer than the straight run. The cap turns a little under one turn, and that slack takes up the twist.
@@ -129,9 +135,10 @@ The display shows:
 - warnings for a weak or missing sensor
 
 The controls are:
-- **Long-press** the screen to calibrate to 20.9 % air.
+- **Long-press** on the main page to calibrate to 20.9 % air.
+- **Long-press** on the detail page to power off.
 - **Tap** to switch to the detail page (raw mV and calibration values).
-- On the serial console, `c` calibrates to air, `o` calibrates to 100 % O2 (optional second point), and `r` resets.
+- On the serial console, `c` calibrates to air, `o` calibrates to 100 % O2 (optional second point), `r` resets calibration, and `p` powers off.
 
 Calibration is saved in flash. Recalibrate before each use, as you would with any analyzer.
 

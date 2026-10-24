@@ -654,11 +654,12 @@ function drawScreen() {
     if (calO2Mv > 0) centerText(`O2 cal ${f(calO2Mv, 2)} mV`, 130, 1, C_DIM);
     centerText(valid ? `${f(o2Now, 1)} %` : "--", 146, 2, C_FG);
     if (BATT_DIVIDER > 0) centerText(`batt ${f(battV, 2)} V`, 172, 1, C_DIM);
+    centerText("HOLD: POWER OFF", 186, 1, C_DIM);
   }
 
   let st, sc;
   if (!adsOk)                { st = "NO ADC";        sc = C_BAD; }
-  else if (calMv <= 0)       { st = "HOLD: CAL AIR"; sc = C_WARN; }
+  else if (calMv <= 0)       { st = page ? "NOT CALIBRATED" : "HOLD: CAL AIR"; sc = C_WARN; }
   else if (mvNow < 0.3)      { st = "NO SENSOR";     sc = C_BAD; }
   else if (sensorWeak)       { st = "SENSOR WEAK";   sc = C_WARN; }
   else if (stable)           { st = "STABLE";        sc = C_OK; }
@@ -685,7 +686,7 @@ function handleTouch() {
   if (!hw.touching && !touch.down) return;
   const finger = hw.touching;
   if (finger && !touch.down) { touch.down = true; touch.downAt = millis(); touch.longDone = false; }
-  else if (finger && touch.down && !touch.longDone && millis() - touch.downAt > 1500) { touch.longDone = true; calibrateAir(); }
+  else if (finger && touch.down && !touch.longDone && millis() - touch.downAt > 1500) { touch.longDone = true; if (page === 0) calibrateAir(); else powerOff(); }
   else if (!finger && touch.down) {
     touch.down = false;
     if (!touch.longDone && millis() - touch.downAt < 600) page ^= 1;
@@ -696,6 +697,7 @@ function serialCommand(c) {
   if (c === "c") calibrateAir();
   if (c === "o") calibrateO2();
   if (c === "r") { calMv = 0; calO2Mv = 0; saveCal(); flash("CAL RESET"); }
+  if (c === "p") powerOff();
 }
 
 function loop() {
@@ -775,7 +777,25 @@ lcd.addEventListener("pointerdown", e => { hw.touching = true; lcd.setPointerCap
 lcd.addEventListener("contextmenu", e => e.preventDefault());
 
 /* ---------- Run ---------- */
-let booting = true, bootSkip = false;
+let booting = true, bootSkip = false, offState = 0, offAt = 0;
+// Mirror of powerOff(): message, wait for the finger to lift, fade, then "deep sleep" until a touch.
+function powerOff() {
+  gfx.fillScreen(C_BG);
+  centerText("POWERING OFF", 104, 2, C_FG);
+  centerText("touch screen to wake", 132, 1, C_DIM);
+  serialPrint("power off: deep sleep", "cmd");
+  offState = 1; offAt = 0;
+}
+function offStep() {
+  if (offState === 1) { if (!hw.touching) { offState = 2; offAt = performance.now(); } return; }
+  const dt = performance.now() - offAt;
+  if (offState === 2) {
+    if (dt > 1200) lcd.style.opacity = String(Math.max(0, 1 - (dt - 1200) / 260));
+    if (dt > 1460) { gfx.fillScreen(C_BG); lcd.style.opacity = "1"; offState = 3; }
+    return;
+  }
+  if (hw.touching) { offState = 0; serialPrint("--- wake from deep sleep ---", "cmd"); setup(); }   // touch wakes = reboot
+}
 function bootStep() {
   // Same rules as bootAnimation(): runs BOOT_MS, a tap skips it, then waits for the finger to lift
   const t = millis();
@@ -795,7 +815,7 @@ function step() {
   lastT = now;
   const target = hw.cellAirMv * hw.gasO2 / AIR_O2;
   hw.cellMv += (target - hw.cellMv) * (1 - Math.exp(-dt / CELL_TAU_S));
-  if (booting) bootStep(); else loop();
+  if (offState) offStep(); else if (booting) bootStep(); else loop();
   holdBar.style.width = touch.down && !touch.longDone ? `${Math.min(100, (millis() - touch.downAt) / 15)}%` : "0";
 }
 setup();

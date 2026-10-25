@@ -141,7 +141,7 @@ batt_lip       = 1.0;    // lip at the front of the battery pocket floor; the ba
 tube_end_wall  = 2.0;
 screw_x        = 13.0;   // 2x M2 screws joining puck and tube, at (±screw_x, 0)
 use_inserts    = true;   // M2 heat-set inserts in the tube (false: self-tapping screws)
-insert_hole_d  = 3.2;    // check your inserts' recommended hole (M2 x 3, ~3.5 OD: 3.2)
+insert_hole_d  = 2.5;    // for M2 x 3 inserts 3.0 mm across (about OD - 0.5); check your inserts' recommendation
 insert_depth   = 3.5;    // insert length + 0.5; stays above the battery pocket
 screw_pilot    = 1.7;    // in the tube, when use_inserts = false
 screw_hole     = 2.4;    // in the puck floor

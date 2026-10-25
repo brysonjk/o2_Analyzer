@@ -55,7 +55,7 @@ The puck and the tube are separate prints so that both threads print upright: th
 |---|---|---|---|
 | Tube/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
 | Battery pocket | `batt_clear` (0.4) | 0.6 | 0.3 |
-| Heat-set insert holes | `insert_hole_d` (3.2) | — | use your inserts' recommended hole size |
+| Heat-set insert holes | `insert_hole_d` (2.5) | — | use your inserts' recommended hole size |
 | Display board in the body | `disp_clear` (0.5) | 0.7 | 0.3 |
 | Board's USB-C tab in the body | `tab_clear` (0.7) | 0.9 | 0.5 |
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
@@ -70,7 +70,7 @@ The puck and the tube are separate prints so that both threads print upright: th
 - A Molex mating pigtail for the sensor (sold as an "R-22 sensor cable" or a Molex KK 2.54 3-pin housing). Silicone-insulated wire is best, because it flexes the most as the cap turns.
 - A 1S LiPo, 602030 or similar, with a JST-1.25 2-pin plug
 - A short JST-1.25 2-pin extension (male/female). Its battery-side plug sits in the plug space in the tube, so you can swap the battery without opening the puck.
-- 2× M2 heat-set inserts (M2 × 3 mm long, about 3.5 mm across, e.g. CNC Kitchen or ruthex) and 2× M2×4 pan-head screws, to join the puck and the tube. If you'd rather skip the inserts, set `use_inserts = false` and use 2× M2×6 self-tapping screws instead.
+- 2× M2 heat-set inserts (3 mm long, 3.0 mm across) and 2× M2×4 pan-head screws, to join the puck and the tube. If you'd rather skip the inserts, set `use_inserts = false` and use 2× M2×6 self-tapping screws instead.
 - Four thin wires (about 28–30 AWG silicone) soldered to the board's 4-pin SH 1.0 connector. There's no room in the body for a plug in that side-entry connector, so solder the wires directly to its pins, or remove the connector and solder to its pads.
 - Optional: 2× 100 kΩ resistors and a 100 nF capacitor for the battery gauge
 

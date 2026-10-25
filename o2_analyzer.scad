@@ -87,9 +87,9 @@ s_bore_body    = s_body_d + 2*body_clear;
 s_bore_flange  = s_flange_d + 2*flange_clear;
 
 // LiPo (default 602030: 6 x 20 x 30 mm, ~300 mAh)
-batt_t         = 6.0;
-batt_w         = 20.0;
-batt_l         = 30.0;
+batt_t         = 6.0;    // measured 5.96 x 20.01 x 31.01 (a real "602030" runs a little long)
+batt_w         = 20.1;
+batt_l         = 31.1;
 
 // ADS1115 breakout (Adafruit / clone ≈ 28 x 17.8), no headers, wires flat
 ads_l          = 28.6;
@@ -134,8 +134,10 @@ oring_bore     = s_oring_d - 2*oring_squeeze;
 tube_top_wall  = 2.5;    // between the plug space and the puck
 plug_box_w     = 22.0;   // plug space: Molex plug, battery JST, leads
 plug_box_h     = 9.0;
-batt_clear     = 0.4;    // battery pocket clearance, each side
-batt_lip       = 1.0;    // lip at the front of the battery pocket floor
+batt_clear     = 0.5;    // battery pocket clearance, sides and ends
+batt_clear_t   = 0.4;    // above and below the battery (the pocket is also batt_lip taller)
+batt_lip       = 1.0;    // lip at the front of the battery pocket floor; the battery rides
+                         //   over it on the way in, then drops in behind it
 tube_end_wall  = 2.0;
 screw_x        = 13.0;   // 2x M2 screws joining puck and tube, at (±screw_x, 0)
 use_inserts    = true;   // M2 heat-set inserts in the tube (false: self-tapping screws)
@@ -182,13 +184,17 @@ y_f       = max((z_ax + r_t > z_rim0 - 0.2 ? bz_od/2 : od/2) + 0.6,   // spigot 
 y_srear   = y_f - (s_rear_in_cap - cap_h);              // sensor rear face
 y_pk1     = y_srear - plug_clear;                       // battery pocket front (plug space ahead of it)
 batt_pk_l = batt_l + 2*batt_clear + batt_lip;
+z_pk1     = z_ax + batt_t/2 + batt_clear_t;            // battery pocket top
+z_pk0     = z_pk1 - batt_t - 2*batt_clear_t - batt_lip; // battery pocket floor
 y_bk0     = y_pk1 - batt_pk_l;                          // battery pocket rear
 y_r       = y_bk0 - tube_end_wall;                      // tube rear face
 y_bore0   = y_srear - 0.3;                              // boss bore starts here (inside the collar)
 y_wire    = min((y_pk1 + y_col0)/2, sqrt(pow(cav_bore/2, 2) - 25) - wire_hole_d/2 - 0.3);
 boss_bore = s_boss_d + 1.6;
 
-assert(!use_inserts || -insert_depth > z_ax + batt_t/2 + batt_clear + 0.05, "insert holes would break into the battery pocket");
+assert(!use_inserts || -insert_depth > z_pk1 + 0.05 || screw_x - insert_hole_d/2 - (batt_w/2 + batt_clear) > 1.2, "insert holes would break into the battery pocket");
+assert(z_pk0 >= z_ax - plug_box_h/2 - 0.01, "battery pocket floor below the plug space");
+assert(batt_w + 2*batt_clear <= plug_box_w, "battery won't pass through the plug space");
 assert(y_bore0 >= y_col0 + collar_wall - 0.01, "boss bore would break out of the collar's back face");
 assert(y_wire - wire_hole_d/2 > y_pk1 + 0.3, "wire holes miss the plug space");
 echo(str("z_ax ", z_ax, "  y_col0 ", y_col0, "  y_f ", y_f, "  y_srear ", y_srear, "  y_pk1 ", y_pk1, "  y_bk0 ", y_bk0, "  y_r ", y_r, "  y_wire ", y_wire, "  r_t ", r_t));
@@ -342,8 +348,8 @@ module tube() {
         along_y(y_f + th_len - 4, 0) cylinder(d1 = boss_bore, d2 = th_major - 2*th_depth - 5.0, h = 4 + eps);
         translate([0, y_f + th_len - eps, z_ax]) rotate([-90, 0, 0]) cylinder(d = th_major - 2*th_depth - 5.0, h = 1);
         // battery pocket
-        translate([-batt_w/2 - batt_clear, y_bk0, z_ax - batt_t/2 - batt_clear])
-            cube([batt_w + 2*batt_clear, batt_pk_l + eps, batt_t + 2*batt_clear]);
+        translate([-batt_w/2 - batt_clear, y_bk0, z_pk0])
+            cube([batt_w + 2*batt_clear, batt_pk_l + eps, z_pk1 - z_pk0]);
         // wire holes up into the puck, screw pilot holes
         for (s = [-1, 1]) {
             translate([s * 5, y_wire, z_ax + plug_box_h/2 - eps]) cylinder(d = wire_hole_d, h = tube_top_wall + 2*eps, $fn = 32);
@@ -361,7 +367,7 @@ module tube() {
     }
     // lip across the front of the battery pocket floor: lift the battery's
     // front end over it to slide the battery out
-    translate([-batt_w/2 - batt_clear, y_pk1 - batt_lip, z_ax - batt_t/2 - batt_clear - eps])
+    translate([-batt_w/2 - batt_clear, y_pk1 - batt_lip, z_pk0 - eps])
         cube([batt_w + 2*batt_clear, batt_lip, batt_lip + eps]);
 }
 
@@ -560,7 +566,7 @@ module assembly(explode = 0) {
     translate([0, 0, z_rim0 + explode * 1.2]) color("#2c2c2c") bezel();
     translate([0, 0, z_pcb + explode * 0.8]) dummy_display();
     color("purple") translate(ads_pos + [0, 0, explode * 0.4]) cube([ads_w, ads_l, 1.6]);
-    color("orange") translate([-batt_w/2, y_bk0 + batt_clear - explode * 1.5, z_ax - batt_t/2 - explode * 0.8]) cube([batt_w, batt_l, batt_t]);
+    color("orange") translate([-batt_w/2, y_bk0 + batt_clear - explode * 1.5, z_pk0 + 0.05 - explode * 0.8]) cube([batt_w, batt_l, batt_t]);
     translate([0, 0, -explode * 0.8]) at_cap(explode * 1.5) {
         color("#e0e0e0") cap();
         translate([0, 0, z_sh + explode * 0.8]) dummy_sensor();

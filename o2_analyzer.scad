@@ -137,8 +137,11 @@ plug_box_h     = 9.0;
 batt_clear     = 0.4;    // battery pocket clearance, each side
 batt_lip       = 1.0;    // lip at the front of the battery pocket floor
 tube_end_wall  = 2.0;
-screw_x        = 14.0;   // 2x M2 screws joining puck and tube, at (±screw_x, 0)
-screw_pilot    = 1.7;    // in the tube (self-tapping)
+screw_x        = 13.0;   // 2x M2 screws joining puck and tube, at (±screw_x, 0)
+use_inserts    = true;   // M2 heat-set inserts in the tube (false: self-tapping screws)
+insert_hole_d  = 3.2;    // check your inserts' recommended hole (M2 x 3, ~3.5 OD: 3.2)
+insert_depth   = 3.5;    // insert length + 0.5; stays above the battery pocket
+screw_pilot    = 1.7;    // in the tube, when use_inserts = false
 screw_hole     = 2.4;    // in the puck floor
 wire_hole_d    = 4.5;
 
@@ -181,6 +184,7 @@ y_r       = y_bk0 - tube_end_wall;                      // tube rear face
 y_wire    = min((y_pk1 + y_col0)/2, sqrt(pow(cav_bore/2, 2) - 25) - wire_hole_d/2 - 0.3);
 boss_bore = s_boss_d + 1.6;
 
+assert(!use_inserts || -insert_depth > z_ax + batt_t/2 + batt_clear + 0.05, "insert holes would break into the battery pocket");
 assert(y_srear > y_col0 + 0.5, "sensor boss would reach the plug space under the puck");
 assert(y_wire - wire_hole_d/2 > y_pk1 + 0.3, "wire holes miss the plug space");
 echo(str("z_ax ", z_ax, "  y_col0 ", y_col0, "  y_f ", y_f, "  y_srear ", y_srear, "  y_pk1 ", y_pk1, "  y_bk0 ", y_bk0, "  y_r ", y_r, "  y_wire ", y_wire, "  r_t ", r_t));
@@ -329,7 +333,11 @@ module tube() {
         // wire holes up into the puck, screw pilot holes
         for (s = [-1, 1]) {
             translate([s * 5, y_wire, z_ax + plug_box_h/2 - eps]) cylinder(d = wire_hole_d, h = tube_top_wall + 2*eps, $fn = 32);
-            translate([s * screw_x, 0, -7]) cylinder(d = screw_pilot, h = 7 + eps, $fn = 16);
+            if (use_inserts) {
+                translate([s * screw_x, 0, -insert_depth]) cylinder(d = insert_hole_d, h = insert_depth + eps, $fn = 24);
+                translate([s * screw_x, 0, -0.4]) cylinder(d1 = insert_hole_d, d2 = insert_hole_d + 0.8, h = 0.4 + eps, $fn = 24);
+            } else
+                translate([s * screw_x, 0, -7]) cylinder(d = screw_pilot, h = 7 + eps, $fn = 16);
         }
         // shoulder relief so the cap's last turn runs fully home
         translate([0, y_f - eps, z_ax]) rotate([-90, 0, 0]) difference() {

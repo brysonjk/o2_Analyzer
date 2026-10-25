@@ -8,7 +8,7 @@ A handheld analyzer shaped like a T: the round display faces up on a puck, and t
    ┌──────── BEZEL ─────────┐        screws onto the puck's rim, holds the glass
    │  ESP32-2424S012         │        USB-C at the back, power button on the left
    │  ADS1115 bay            │  PUCK
-   ├──┴─── 2× M2 screws ──┴──┤
+   ├──┴── 2× M2 screws + inserts ┴┤
    │  LiPo pocket   │ plug    ╞══ CAP ══╡ DIVERTER
    └──── TUBE ──────┴─space───┘   sensor     DIN cone / yoke face
                         4-start spigot
@@ -55,6 +55,7 @@ The puck and the tube are separate prints so that both threads print upright: th
 |---|---|---|---|
 | Tube/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
 | Battery pocket | `batt_clear` (0.4) | 0.6 | 0.3 |
+| Heat-set insert holes | `insert_hole_d` (3.2) | — | use your inserts' recommended hole size |
 | Display board in the body | `disp_clear` (0.5) | 0.7 | 0.3 |
 | Board's USB-C tab in the body | `tab_clear` (0.7) | 0.9 | 0.5 |
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
@@ -69,7 +70,7 @@ The puck and the tube are separate prints so that both threads print upright: th
 - A Molex mating pigtail for the sensor (sold as an "R-22 sensor cable" or a Molex KK 2.54 3-pin housing). Silicone-insulated wire is best, because it flexes the most as the cap turns.
 - A 1S LiPo, 602030 or similar, with a JST-1.25 2-pin plug
 - A short JST-1.25 2-pin extension (male/female). Its battery-side plug sits in the plug space in the tube, so you can swap the battery without opening the puck.
-- 2× M2×6 pan-head self-tapping screws, to join the puck and the tube
+- 2× M2 heat-set inserts (M2 × 3 mm long, about 3.5 mm across, e.g. CNC Kitchen or ruthex) and 2× M2×4 pan-head screws, to join the puck and the tube. If you'd rather skip the inserts, set `use_inserts = false` and use 2× M2×6 self-tapping screws instead.
 - Four thin wires (about 28–30 AWG silicone) soldered to the board's 4-pin SH 1.0 connector. There's no room in the body for a plug in that side-entry connector, so solder the wires directly to its pins, or remove the connector and solder to its pads.
 - Optional: 2× 100 kΩ resistors and a 100 nF capacitor for the battery gauge
 
@@ -96,7 +97,7 @@ The IP5306 on these boards appears to be a factory-configured variant that doesn
 USB-C charges the battery and programs the board. While USB is plugged in, the board stays powered.
 
 ## Assembly
-1. **Join the puck and the tube.** Set the puck's flat bottom on the tube's flat top, with the puck's USB-C slot over the tube's back end and the two wire holes lined up. Drive the 2× M2×6 screws down through the puck floor into the tube. Do this first, while the puck is empty.
+1. **Join the puck and the tube.** Press the two heat-set inserts into the holes in the tube's flat top with a soldering iron (about 220 °C for PETG). Push them in flush or a little below the surface, never proud of it, or the puck won't sit flat. If one ends up proud, file it flush. Then set the puck's flat bottom on the tube's flat top, with the puck's USB-C slot over the tube's back end and the two wire holes lined up, and drive the 2× M2×4 screws down through the puck floor into the inserts. Do this first, while the puck is empty.
 2. Solder the wires to the ADS1115. Leave the sensor and battery leads long, and feed them down through the two wire holes into the tube's plug space, then out through the spigot. Leave the sensor leads about 3 cm longer than the straight run: the cap turns a little under one turn, and that slack takes up the twist. Fix the ADS1115 to the puck floor with double-sided foam tape, long side front to back, clear of the screw heads.
 3. Solder the four ADS1115 wires to the board's SH connector pins, at the lower right with the display facing you, and plug the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot at the back. The 42 mm cover glass settles into the pocket at the top, level with the rim. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall.
 4. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. Snug by hand is enough.

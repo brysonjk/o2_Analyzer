@@ -305,10 +305,12 @@ module tube() {
                 }
                 translate([-r_t - 1, y_r - 1, z_ax - r_t - 1]) cube([2*r_t + 2, y_f - y_r + 2, r_t + 1 - z_ax]);
             }
-            // full-round collar, cut back where the bezel overhangs it
+            // full-round collar in front of the puck: its back follows the puck's
+            // curve (0.6 mm away), and it's cut back where the bezel overhangs it
             difference() {
-                along_y(y_col0, 0) cylinder(r = r_t, h = y_f - y_col0);
-                translate([0, 0, z_rim0 - 0.3]) cylinder(r = bz_od/2 + 0.5, h = 30);
+                along_y(y_col0 - 10, 0) cylinder(r = r_t, h = y_f - y_col0 + 10);
+                translate([0, 0, -eps]) cylinder(r = od/2 + 0.6, h = 30, $fn = 192);
+                translate([0, 0, z_rim0 - 0.3]) cylinder(r = bz_od/2 + 0.5, h = 30, $fn = 192);
             }
             // threaded spigot (male, 4-start) with a lead-in chamfer at the tip
             translate([0, y_f + th_len, z_ax]) rotate([90, 0, 0]) intersection() {

@@ -174,7 +174,8 @@ s_rear_in_cap = z_sh + sensor_h;           // sensor rear face (sticks out of th
 
 /* ---------- Derived: TUBE (same frame as the puck; sensor points +Y) ---------- */
 z_ax      = -(plug_box_h/2 + tube_top_wall);           // tube axis height
-y_col0    = od/2 + 0.6;                                 // full-round collar starts in front of the puck
+chin_gap  = 0.3;                                        // between the puck's chin and the tube's collar
+y_col0    = od/2 + chin_gap;                            // full-round collar starts in front of the puck
 y_f       = (z_ax + r_t > z_rim0 - 0.2 ? bz_od/2 : od/2) + 0.6;   // spigot shoulder, clear of the bezel
 y_srear   = y_f - (s_rear_in_cap - cap_h);              // sensor rear face
 y_pk1     = y_srear - plug_clear;                       // battery pocket front (plug space ahead of it)
@@ -230,6 +231,13 @@ module body() {
             hull() {
                 translate([0, 0, 0.6]) cylinder(d = od, h = z_rim0 - 0.6);
                 cylinder(d = od - 1.2, h = 0.6 + eps);
+            }
+            // chin: fills the curve between the puck's round front and the tube's
+            // flat-backed collar, following the tube's round profile. Kept below
+            // the bezel. (Inside the puck it's cut away with the cavity.)
+            intersection() {
+                translate([-r_t - 1, 0, 0]) cube([2*r_t + 2, y_col0 - chin_gap, z_rim0 - 0.3]);
+                along_y(0, 0) cylinder(r = r_t, h = y_col0, $fn = 192);
             }
             // threaded rim for the bezel (lead-in chamfer at the top)
             translate([0, 0, z_rim0 - eps]) intersection() {
@@ -305,12 +313,12 @@ module tube() {
                 }
                 translate([-r_t - 1, y_r - 1, z_ax - r_t - 1]) cube([2*r_t + 2, y_f - y_r + 2, r_t + 1 - z_ax]);
             }
-            // full-round collar in front of the puck: its back follows the puck's
-            // curve (0.6 mm away), and it's cut back where the bezel overhangs it
-            difference() {
-                along_y(y_col0 - 10, 0) cylinder(r = r_t, h = y_f - y_col0 + 10);
-                translate([0, 0, -eps]) cylinder(r = od/2 + 0.6, h = 30, $fn = 192);
-                translate([0, 0, z_rim0 - 0.3]) cylinder(r = bz_od/2 + 0.5, h = 30, $fn = 192);
+            // full-round collar in front of the puck (flat back face; the puck's
+            // chin fills the curve behind it). Its top is trimmed flat, level with
+            // the chin's top, to clear the bezel.
+            intersection() {
+                along_y(y_col0, 0) cylinder(r = r_t, h = y_f - y_col0);
+                translate([-r_t - 1, y_col0 - 1, z_ax - r_t - 1]) cube([2*r_t + 2, y_f - y_col0 + 2, z_rim0 - 0.3 - (z_ax - r_t - 1)]);
             }
             // threaded spigot (male, 4-start) with a lead-in chamfer at the tip
             translate([0, y_f + th_len, z_ax]) rotate([90, 0, 0]) intersection() {

@@ -41,7 +41,7 @@ Other R-22D-type sensors may differ slightly, so check them against yours. Only 
 - `usb_off`: the USB-C connector sits 2.6 mm left of the tab's centre with the display facing you (−2.6).
 - `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach`: where the USB-C port and the on/off switch sit, and how far in the button nub reaches. Angles are measured looking at the display side: 0° is right, 270° is the USB-C end, and 180° puts the switch on the left.
 - `pad_angles`: where the three board support pads go. Check that the back of your board has no parts at its edge at 30°, 150° and 300°.
-- `batt_*` — the battery size. The default is a 602030 (6×20×30 mm, ≈300 mAh). It lies flat in the tube and slides out through the plug space and the spigot, which pass up to about 21 × 8 mm.
+- `batt_*` — the battery size. The default is a 602030 (nominally 6×20×30 mm, ≈300 mAh; the pocket is sized for a measured 5.96 × 20.01 × 31.01 mm cell). It lies flat in the tube and slides out through the plug space and the spigot, which pass up to about 21 × 8 mm.
 - `ads_zone` — 3.8 mm for the ADS1115 with its wires soldered flat. Raise it if your wiring stands taller.
 
 Export a part with: `openscad -D 'PART="body"' -o body.stl o2_analyzer.scad` (also `tube`, `cap`, `bezel`, `fit_test`, `assembly`, `exploded`, `section`). Export the diverter with `openscad -o diverter.stl diverter.scad`.

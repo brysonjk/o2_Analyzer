@@ -98,7 +98,7 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
   <aside class="side">
     <div>
       <h1>O<sub>2</sub> Analyzer</h1>
-      <p class="sub">ESP32-2424S012 round display, ADS1115, 1S LiPo and an R-22D sensor in a Ø46 mm screw-cap body.</p>
+      <p class="sub">ESP32-2424S012 round display, ADS1115, 1S LiPo and an R-22D sensor in a T-shaped body: the screen faces up while the sensor points forward.</p>
       <p class="sub"><a class="back" href="../simulator/">Try the display simulator →</a></p>
     </div>
 
@@ -129,11 +129,11 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
     <section>
       <p class="label">Envelope</p>
       <dl class="dims">
-        <dt>Diameter</dt><dd>46 mm body, 50 mm bezel</dd>
-        <dt>Length</dt><dd id="dLen">68.3 mm + 4.8 mm sensor nose</dd>
-        <dt>With diverter</dt><dd id="dDiv">81.9 mm</dd>
-        <dt>Cap thread</dt><dd>M42.4, 4-start, 8 mm/turn</dd>
-        <dt>Printed parts</dt><dd id="dParts">4 (bezel, body, cap, diverter), no screws</dd>
+        <dt>Height</dt><dd>39.5 mm (Ø50 bezel on a Ø35.4 tube)</dd>
+        <dt>Length</dt><dd id="dLen">85.1 mm + 4.8 mm sensor nose</dd>
+        <dt>With diverter</dt><dd id="dDiv">98.7 mm</dd>
+        <dt>Cap thread</dt><dd>M31, 4-start, 8 mm/turn</dd>
+        <dt>Printed parts</dt><dd id="dParts">5 (bezel, puck, tube, cap, diverter), 2× M2×6 screws</dd>
       </dl>
     </section>
 
@@ -146,14 +146,15 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/STLLoader.js"></script>
 <script>
 const PARTS = [
-  { id: "bezel",    name: "Bezel",             color: 0x2b3036, dz:  24, print: true },
-  { id: "display",  name: "Round display",     color: 0x1d3f7a, dz:  15, ref: true },
-  { id: "ads",      name: "ADS1115",           color: 0x6a3d9a, dz:   7, ref: true },
-  { id: "body",     name: "Body",              color: 0x3f6fa0, dz:   0, print: true },
-  { id: "battery",  name: "LiPo 602030",       color: 0xc9cdd2, dz: -14, ref: true },
-  { id: "sensor",   name: "R-22D sensor",      color: 0x23272b, dz: -34, ref: true },
-  { id: "cap",      name: "Cap",               color: 0xd8dde1, dz: -80, print: true },
-  { id: "diverter", name: "Diverter",          color: 0x1f9e8f, dz: -110, print: true },
+  { id: "bezel",    name: "Bezel",             color: 0x2b3036, ex: [0,   0,  30], print: true },
+  { id: "display",  name: "Round display",     color: 0x1d3f7a, ex: [0,   0,  18], ref: true },
+  { id: "ads",      name: "ADS1115",           color: 0x6a3d9a, ex: [0,   0,   8], ref: true },
+  { id: "body",     name: "Display puck",      color: 0x3f6fa0, ex: [0,   0,   0], print: true },
+  { id: "tube",     name: "Sensor tube",       color: 0x5a8cc4, ex: [0,   0, -22], print: true },
+  { id: "battery",  name: "LiPo 602030",       color: 0xc9cdd2, ex: [0,  52, -22], ref: true },
+  { id: "sensor",   name: "R-22D sensor",      color: 0x23272b, ex: [0, 112, -22], ref: true },
+  { id: "cap",      name: "Cap",               color: 0xd8dde1, ex: [0,  60, -22], print: true },
+  { id: "diverter", name: "Diverter",          color: 0x1f9e8f, ex: [0, 150, -22], print: true },
 ];
 
 const canvas = document.getElementById("c");
@@ -174,7 +175,7 @@ const key = new THREE.DirectionalLight(0xffffff, 0.85); key.position.set(120, 16
 const rim = new THREE.DirectionalLight(0xffffff, 0.35); rim.position.set(-150, -80, -60); scene.add(rim);
 const fill = new THREE.DirectionalLight(0xffffff, 0.25); fill.position.set(-60, 200, 40); scene.add(fill);
 
-const clip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);   // keeps y >= 0 when cut
+const clip = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);   // keeps x >= 0 when cut (along the sensor axis)
 const group = new THREE.Group(); scene.add(group);
 const meshes = {};
 
@@ -220,7 +221,7 @@ PARTS.forEach(p => {
 let explodeT = 0, explodeTarget = 0;
 const explodeEl = document.getElementById("explode"), explodeVal = document.getElementById("explodeVal");
 function applyExplode() {
-  for (const id in meshes) meshes[id].position.z = meshes[id].userData.dz * explodeT;
+  for (const id in meshes) { const e = meshes[id].userData.ex; meshes[id].position.set(e[0] * explodeT, e[1] * explodeT, e[2] * explodeT); }
 }
 explodeEl.addEventListener("input", () => { explodeTarget = explodeEl.value / 100; explodeVal.textContent = explodeEl.value + "%"; setView(null); });
 
@@ -255,11 +256,11 @@ controls.autoRotateSpeed = 1.6;
 let camGoal = null;
 function frame(instant, v) {
   const exploded = explodeTarget > 0.5;
-  const zMid = exploded ? -50 : -12;
-  const dist = exploded ? 460 : 260;
-  const dir = v === "cut" ? new THREE.Vector3(0.25, -1, 0.3) : new THREE.Vector3(0.9, 1.1, 0.55);
+  const yMid = exploded ? 55 : 22;
+  const dist = exploded ? 420 : 250;
+  const dir = v === "cut" ? new THREE.Vector3(-1, 0.15, 0.25) : new THREE.Vector3(-1.0, -0.75, 0.75);
   dir.normalize().multiplyScalar(dist);
-  const target = new THREE.Vector3(0, 0, zMid);
+  const target = new THREE.Vector3(0, yMid, -6);
   const pos = target.clone().add(dir);
   if (instant) { controls.target.copy(target); camera.position.copy(pos); }
   else camGoal = { target, pos };

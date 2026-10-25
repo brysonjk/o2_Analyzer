@@ -1,32 +1,29 @@
 # Compact O2 Analyzer — ESP32-2424S012 + ADS1115 + R-22D
 
-A handheld analyzer (Ø46 mm body with a Ø50 mm bezel) made from **4 printed parts and no screws**: bezel, body, cap and diverter. The round display sits on top. The cap unscrews in under one turn to give access to both the sensor and the battery. It's 68.3 mm long plus the sensor's 4.8 mm threaded nose, or 81.9 mm with the diverter on.
+A handheld analyzer shaped like a T: the round display faces up on a puck, and the sensor points forward out of a tube underneath it. Hold the diverter against a cylinder valve and the screen faces you, upright. It's made from **5 printed parts** (bezel, display puck, sensor tube, cap and diverter) and 2 small screws. It's 39.5 mm tall, 85.1 mm long plus the sensor's 4.8 mm threaded nose, or 98.7 mm with the diverter on. The cap unscrews in under one turn to give access to the sensor and the battery.
 
 ```
-   ┌──────── BEZEL ────────┐   screws onto the rim, holds the display glass
-   │   ESP32-2424S012       │   USB-C slot + flexure power button in the wall
-   │   ADS1115 bay          │
-   │── floor (wire holes) ──│
-   │   LiPo pocket ↓ opens  │   two spring latches hold the battery
-   └── 4-start spigot ──────┘
-   ┌──────── CAP ──────────┐   < 1 turn off → battery + sensor accessible
-   │   Molex headroom       │
-    \    R-22D sensor     /    cap tapers to follow the sensor
-     │                  │
-     └── floor + O-ring ┘       sensor shoulder sits on the floor; O-ring seals in its hole
-       │  DIVERTER    │         screws onto the sensor nose and clamps the floor
-       └ DIN cone/yoke┘         Ø1.6 mm restrictor inlet
+  side view (sensor points right; you look at the screen from the left)
+
+   ┌──────── BEZEL ─────────┐        screws onto the puck's rim, holds the glass
+   │  ESP32-2424S012         │        USB-C at the back, power button on the left
+   │  ADS1115 bay            │  PUCK
+   ├──┴─── 2× M2 screws ──┴──┤
+   │  LiPo pocket   │ plug    ╞══ CAP ══╡ DIVERTER
+   └──── TUBE ──────┴─space───┘   sensor     DIN cone / yoke face
+                        4-start spigot
 ```
 
 ## Files
 | File | What |
 |---|---|
 | `o2_analyzer.scad` | Fully parametric model (OpenSCAD). Every dimension is at the top. |
-| `stl/body.stl` | Main body. Print upright (spigot down), no supports. |
+| `stl/body.stl` | Display puck. Print rim-up (flat bottom on the plate), no supports. |
+| `stl/tube.stl` | Sensor tube. Print standing on its spigot, as exported, no supports. |
 | `stl/cap.stl` | Cap. The sensor sits on its floor. Print open-end up, as exported, no supports (the taper is under 45°). |
 | `diverter.scad` → `stl/diverter.stl` | Screw-on diverter. It also holds the sensor in. Print nose-down, no supports. |
 | `stl/bezel.stl` | Screw-on display bezel. Already flipped face-down for printing. |
-| `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (the cap floor with its O-ring hole, plus the body bore), flange ring, and a 4 mm thread pair. |
+| `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (the cap floor with its O-ring hole, plus the body bore), flange ring, and a 4 mm pair of the tube/cap thread (male ring and female ring). |
 | `step/*.step` | The same parts as STEP solids for Fusion 360 or SolidWorks (see CAD files below). |
 | `firmware/O2_Analyzer/O2_Analyzer.ino` | Arduino sketch. |
 
@@ -44,20 +41,20 @@ Other R-22D-type sensors may differ slightly, so check them against yours. Only 
 - `usb_off`: the USB-C connector sits 2.6 mm left of the tab's centre with the display facing you (−2.6).
 - `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach`: where the USB-C port and the on/off switch sit, and how far in the button nub reaches. Angles are measured looking at the display side: 0° is right, 270° is the USB-C end, and 180° puts the switch on the left.
 - `pad_angles`: where the three board support pads go. Check that the back of your board has no parts at its edge at 30°, 150° and 300°.
-- `batt_*` — the battery size. The default is a 602030 (6×20×30 mm, ≈300 mAh). The pocket must fit inside `spigot_id` (37 mm), which allows a diagonal of up to ~36.5 mm.
+- `batt_*` — the battery size. The default is a 602030 (6×20×30 mm, ≈300 mAh). It lies flat in the tube and slides out through the plug space and the spigot, which pass up to about 21 × 8 mm.
 - `ads_zone` — 3.8 mm for the ADS1115 with its wires soldered flat. Raise it if your wiring stands taller.
 
-Export a part with: `openscad -D 'PART="body"' -o body.stl o2_analyzer.scad` (also `cap`, `bezel`, `fit_test`, `assembly`, `exploded`, `section`). Export the diverter with `openscad -o diverter.stl diverter.scad`.
+Export a part with: `openscad -D 'PART="body"' -o body.stl o2_analyzer.scad` (also `tube`, `cap`, `bezel`, `fit_test`, `assembly`, `exploded`, `section`). Export the diverter with `openscad -o diverter.stl diverter.scad`.
 
-Print in PETG or ASA with 0.2 mm layers and 4 perimeters, because the threads need them. The body/cap thread is 4-start: 2 mm between ridges, 8 mm advance per turn, and 0.4 mm clearance.
+Print in PETG or ASA with 0.2 mm layers and 4 perimeters, because the threads need them. The tube/cap thread is M31, 4-start: 2 mm between ridges, 8 mm advance per turn, and 0.4 mm clearance. The sensor's flange passes through it, so the sensor still drops into the cap from the back.
 
-The body prints spigot-down, so its thread starts on the build plate. Turn on your slicer's **elephant foot compensation** (about 0.15 mm in Bambu Studio). Otherwise the first layers swell and the cap won't start. The spigot also has a 2 mm lead-in chamfer and thread relief at both ends to help.
+The puck and the tube are separate prints so that both threads print upright: the puck rim-up, the tube spigot-down. The tube's thread therefore starts on the build plate. Turn on your slicer's **elephant foot compensation** (about 0.15 mm in Bambu Studio). Otherwise the first layers swell and the cap won't start. The spigot also has a 2 mm lead-in chamfer and thread relief at both ends to help.
 
 **Tuning after a test print:**
 | Feature | Parameter | Too stiff | Too loose |
 |---|---|---|---|
-| Battery latches | `latch_hook` (1.0) | 0.8 | 1.2 |
-| Body/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
+| Tube/cap thread | `th_clear` (0.40) | 0.5 | 0.3 |
+| Battery pocket | `batt_clear` (0.4) | 0.6 | 0.3 |
 | Display board in the body | `disp_clear` (0.5) | 0.7 | 0.3 |
 | Board's USB-C tab in the body | `tab_clear` (0.7) | 0.9 | 0.5 |
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
@@ -71,11 +68,10 @@ The body prints spigot-down, so its thread starts on the build plate. Turn on yo
 - R-22D type sensor with a 3-pin Molex: PSR-11-39-MD, AST-22D, or Divesoft R-22S
 - A Molex mating pigtail for the sensor (sold as an "R-22 sensor cable" or a Molex KK 2.54 3-pin housing). Silicone-insulated wire is best, because it flexes the most as the cap turns.
 - A 1S LiPo, 602030 or similar, with a JST-1.25 2-pin plug
-- A short JST-1.25 2-pin extension (male/female). The battery-side plug then sits in the battery bay, so you can swap the battery without opening the top.
+- A short JST-1.25 2-pin extension (male/female). Its battery-side plug sits in the plug space in the tube, so you can swap the battery without opening the puck.
+- 2× M2×6 pan-head self-tapping screws, to join the puck and the tube
 - Four thin wires (about 28–30 AWG silicone) soldered to the board's 4-pin SH 1.0 connector. There's no room in the body for a plug in that side-entry connector, so solder the wires directly to its pins, or remove the connector and solder to its pads.
 - Optional: 2× 100 kΩ resistors and a 100 nF capacitor for the battery gauge
-
-No screws are needed.
 
 ## Wiring
 | From | To | Notes |
@@ -100,17 +96,18 @@ The IP5306 on these boards appears to be a factory-configured variant that doesn
 USB-C charges the battery and programs the board. While USB is plugged in, the board stays powered.
 
 ## Assembly
-1. Solder the wires to the ADS1115. Seat it in the floor recess with double-sided foam tape, then feed the sensor and battery leads down through the two floor holes. Leave the sensor leads about 3 cm longer than the straight run. The cap turns a little under one turn, and that slack takes up the twist.
-2. Solder the four ADS1115 wires to the board's SH connector pins, at the lower right with the display facing you, and plug the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot. The 42 mm cover glass settles into the pocket at the top, level with the rim. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall. Three small pads under the board's edge support it; they sit where the back of the board has no parts at the edge.
-3. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. It sits just above the cover glass, so the glass and board can't lift, and its window shows the flat part of the glass. Snug by hand is enough.
-4. Plug the battery into the extension in the lead channel, then push the battery up into its pocket until it clicks past the two spring latches. To remove it, hook a finger in the notch and pull it down firmly.
-5. Plug the Molex into the back of the sensor. Drop the sensor nose-first into the cap so its shoulder sits on the floor and the O-ring presses into the floor hole. The threaded nose sticks out underneath.
-6. Screw the cap onto the body. It takes a little under one turn.
-7. Screw the diverter onto the sensor nose until it's snug against the cap floor. Hand-tight is enough. It works like a nut: the cap floor is clamped between the sensor's shoulder and the diverter, so pressing the analyzer against a valve can't push the sensor up.
+1. **Join the puck and the tube.** Set the puck's flat bottom on the tube's flat top, with the puck's USB-C slot over the tube's back end and the two wire holes lined up. Drive the 2× M2×6 screws down through the puck floor into the tube. Do this first, while the puck is empty.
+2. Solder the wires to the ADS1115. Leave the sensor and battery leads long, and feed them down through the two wire holes into the tube's plug space, then out through the spigot. Leave the sensor leads about 3 cm longer than the straight run: the cap turns a little under one turn, and that slack takes up the twist. Fix the ADS1115 to the puck floor with double-sided foam tape, long side front to back, clear of the screw heads.
+3. Solder the four ADS1115 wires to the board's SH connector pins, at the lower right with the display facing you, and plug the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot at the back. The 42 mm cover glass settles into the pocket at the top, level with the rim. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall.
+4. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. Snug by hand is enough.
+5. Plug the battery into the extension, then slide the battery into the tube through the spigot, lying flat with its leads at the front end, until it drops past the small lip at the front of its pocket. Tuck the extension's plug into the plug space. To take the battery out, lift its front end over the lip and slide it out; a loop of tape stuck to its front end makes a handy pull tab.
+6. Plug the Molex into the back of the sensor. Drop the sensor nose-first into the cap so its shoulder sits on the floor and the O-ring presses into the floor hole. The threaded nose sticks out the front.
+7. Screw the cap onto the tube's spigot. It takes a little under one turn.
+8. Screw the diverter onto the sensor nose until it's snug against the cap floor. Hand-tight is enough. It works like a nut: the cap floor is clamped between the sensor's shoulder and the diverter, so pressing the analyzer against a valve can't push the sensor back.
 
 To change the sensor, unscrew the diverter and the cap, then lift the sensor out.
 
-**Power button:** press the flat recess on the side of the body. The tab flexes inward and its nub presses the board's button.
+**Power button:** press the flat recess on the left side of the puck. The tab flexes inward and its nub presses the board's button.
 
 ## Firmware
 Install the **GFX Library for Arduino** (moononournation) and **Adafruit ADS1X15** libraries. Choose the board **ESP32C3 Dev Module** and set *USB CDC On Boot* to Enabled.
@@ -144,6 +141,8 @@ The controls are:
 
 Calibration is saved in flash. Recalibrate before each use, as you would with any analyzer.
 
+In the T body the USB-C faces you and the sensor points away. If the text isn't upright that way, change `DISPLAY_ROTATION` (0–3, quarter turns) at the top of the sketch.
+
 The pin map at the top of the sketch is the commonly published one for this board. If the screen stays dark, check `PIN_TFT_*` first.
 
 ## Diverter: analyzing a cylinder
@@ -168,7 +167,7 @@ If the flow is hard to control on your valves, change the inlet with `inlet_d` i
 
 ## CAD files (STEP) for Fusion 360, SolidWorks, Onshape
 
-> **Out of date:** the STEP files and `cad/o2_analyzer_cq.py` were made from an earlier version, before the sensor was measured, before the screw-on bezel, and before the cap floor that the diverter clamps. They need regenerating before you use them for anything dimensional. The STLs in `stl/` are current.
+> **Out of date:** the STEP files and `cad/o2_analyzer_cq.py` were made from an earlier, straight (non-T) version, before the sensor was measured, before the screw-on bezel, and before the cap floor that the diverter clamps. They need regenerating before you use them for anything dimensional. The STLs in `stl/` are current.
 The `step/` folder has every printed part as a true solid, with exact cylinders, faces and fully modeled threads. Open them with **File → Open** in Fusion 360 or SolidWorks. You can sketch on faces, fillet, cut and measure, then save in that program's own format.
 
 | File | Part | Origin (z = 0) |

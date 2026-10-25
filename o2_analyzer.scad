@@ -1,23 +1,32 @@
 // =====================================================================
 //  Compact O2 Analyzer  —  ESP32-2424S012 + ADS1115 + R-22D sensor
-//  Parametric OpenSCAD enclosure, no screws.  Units: mm.
+//  Parametric OpenSCAD enclosure.  Units: mm.
 //
-//    BEZEL    : screws onto the threaded body rim, holds the display glass
-//    BODY     : display seat, flexure power button, ADS1115 bay, battery
-//               pocket with spring latches, 4-start threaded spigot
+//  T layout: the display faces up, the sensor points forward (+Y) along a
+//  tube under the display, so the screen reads upright while the diverter
+//  is held against a cylinder valve.
+//
+//    BEZEL    : screws onto the threaded rim of the puck, holds the glass
+//    BODY     : display puck: display seat, flexure power button, ADS1115
+//               bay. Flat bottom, sits on the tube (2x M2x6 pan-head screws)
+//    TUBE     : under the puck: battery pocket, plug space, 4-start threaded
+//               spigot pointing forward
 //    CAP      : the sensor sits on a thin floor with its threaded nose out;
-//               the O-ring seals in the floor hole. Tapers to the diverter.
+//               the O-ring seals in the floor hole
 //    DIVERTER : (diverter.scad) screws onto the sensor nose like a nut and
-//               clamps the cap floor, so the sensor can't push up
+//               clamps the cap floor, so the sensor can't push back
 //
-//  Unscrew the CAP (< 1 turn)  ->  pull the battery down out of its
-//  pocket; with the diverter off, lift the sensor out.
+//  The puck and tube print separately so both threads print upright:
+//  puck rim-up, tube spigot-down, cap open end up.
+//
+//  Unscrew the CAP (< 1 turn)  ->  slide the battery out of the tube; with
+//  the diverter off, lift the sensor out of the cap.
 //
 //  Render one part:  set PART below, or from the CLI:
 //     openscad -D 'PART="body"' -o body.stl o2_analyzer.scad
 // =====================================================================
 
-PART = "assembly";   // assembly | exploded | section | body | cap | bezel | fit_test
+PART = "assembly";   // assembly | exploded | section | body | tube | cap | bezel | fit_test
 
 show_diverter = true;     // assembly views: show the screw-on diverter
 
@@ -104,31 +113,41 @@ bz_starts      = 3;
 bz_depth       = 0.7;
 bz_clear       = 0.30;   // radial clearance
 
-// body <-> cap thread: 4-start, so the cap closes in < 1 turn and the
-// sensor wires barely twist
+// tube <-> cap thread: 4-start, so the cap closes in < 1 turn and the
+// sensor wires barely twist. The sensor's flange (28.5) passes through it.
 th_pitch       = 2.0;    // axial spacing between thread ridges
 th_starts      = 4;      // lead = pitch * starts = 8 mm per turn
 th_depth       = 0.9;
 th_len         = 7.0;
-th_major       = 42.4;   // male (body spigot) major diameter
+th_major       = 31.0;   // male (tube spigot) major diameter
 th_clear       = 0.40;   // radial clearance male/female
-th_relief      = 1.5;    // undercut below the cap thread so the shoulder seats before the spigot bottoms
-spigot_id      = 37.0;   // must pass the battery diagonal (36.1 for 602030)
+th_relief      = 1.5;    // undercut below the cap thread so the cap seats on the shoulder
+cap_th_wall    = 1.8;    // cap wall outside the thread root
 
 // cap: the sensor shoulder sits on a floor; the O-ring seals in its hole
 cap_floor_t    = 1.8;    // = O-ring band; keep in sync with diverter.scad
-cap_wall       = 2.0;    // wall around the sensor below the body thread
+cap_wall       = 2.0;    // wall around the sensor
 oring_squeeze  = 0.2;    // radial squeeze on the O-ring (~12% of its 1.7 mm section)
 oring_bore     = s_oring_d - 2*oring_squeeze;
+
+// tube under the puck
+tube_top_wall  = 2.5;    // between the plug space and the puck
+plug_box_w     = 22.0;   // plug space: Molex plug, battery JST, leads
+plug_box_h     = 9.0;
+batt_clear     = 0.4;    // battery pocket clearance, each side
+batt_lip       = 1.0;    // lip at the front of the battery pocket floor
+tube_end_wall  = 2.0;
+screw_x        = 14.0;   // 2x M2 screws joining puck and tube, at (±screw_x, 0)
+screw_pilot    = 1.7;    // in the tube (self-tapping)
+screw_hole     = 2.4;    // in the puck floor
+wire_hole_d    = 4.5;
 
 $fn = 96;
 eps = 0.01;
 
-/* ---------- Derived heights: BODY (z = 0 at spigot end) ---------- */
-z_batt0   = th_len;                        // battery pocket bottom opening
-batt_zone = batt_t + 0.6;
-z_floor   = z_batt0 + batt_zone;           // floor between battery & ADS
-floor_t   = 1.0;
+/* ---------- Derived heights: BODY / puck (z = 0 at its flat bottom) ---------- */
+z_floor   = 0;
+floor_t   = 1.2;
 z_cav0    = z_floor + floor_t;             // ADS cavity floor
 z_pcb     = z_cav0 + ads_zone + comp_h;    // PCB bottom face rests here
 z_glass   = z_pcb + cover_under + cover_t;  // cover glass top
@@ -140,18 +159,36 @@ cav_bore  = od - 2*2.4;                    // ADS / component cavity
 glass_pocket_d = cover_d + 2*glass_clear;
 rim_od    = glass_pocket_d + 2*(rim_wall + bz_depth);   // bezel thread crest
 bz_od     = rim_od + 2*(bz_clear + 1.5);                // bezel outside (about 50 mm)
+ads_pos   = [-ads_w/2, -ads_l/2 + 0.3, z_cav0];         // long side along Y, between the support pads and the wire holes
 
-/* ---------- Derived heights: CAP (z = 0 at its bottom face) ---------- */
+/* ---------- Derived: CAP (z = 0 at its bottom face) ---------- */
 z_sh      = cap_floor_t;                   // sensor shoulder rests on the floor
 z_flange0 = z_sh + s_body_h;
 z_flange1 = z_flange0 + s_flange_h;
-cav_above = max(1.0, plug_clear - th_len); // the spigot bore is free space too
-cap_h     = z_sh + sensor_h + cav_above + th_len;
-z_cap_in_body = th_len - cap_h;            // cap origin in body coordinates
+cap_h     = z_flange1 + th_relief + th_len;   // the spigot tip stops 1.5 behind the flange
+r_t       = (th_major + 2*th_clear)/2 + cap_th_wall;   // cap thread band = tube radius
+s_rear_in_cap = z_sh + sensor_h;           // sensor rear face (sticks out of the cap top)
 
-echo(str("Body height: ", body_h, "   Cap height: ", cap_h));
-echo(str("Overall length: ", body_h + bezel_plate + cap_h - th_len, " + ", nose_len - cap_floor_t,
-         " sensor nose;  with the diverter: ", body_h + bezel_plate + cap_h - th_len + div_len));
+/* ---------- Derived: TUBE (same frame as the puck; sensor points +Y) ---------- */
+z_ax      = -(plug_box_h/2 + tube_top_wall);           // tube axis height
+y_col0    = od/2 + 0.6;                                 // full-round collar starts in front of the puck
+y_f       = (z_ax + r_t > z_rim0 - 0.2 ? bz_od/2 : od/2) + 0.6;   // spigot shoulder, clear of the bezel
+y_srear   = y_f - (s_rear_in_cap - cap_h);              // sensor rear face
+y_pk1     = y_srear - plug_clear;                       // battery pocket front (plug space ahead of it)
+batt_pk_l = batt_l + 2*batt_clear + batt_lip;
+y_bk0     = y_pk1 - batt_pk_l;                          // battery pocket rear
+y_r       = y_bk0 - tube_end_wall;                      // tube rear face
+y_wire    = min((y_pk1 + y_col0)/2, sqrt(pow(cav_bore/2, 2) - 25) - wire_hole_d/2 - 0.3);
+boss_bore = s_boss_d + 1.6;
+
+assert(y_srear > y_col0 + 0.5, "sensor boss would reach the plug space under the puck");
+assert(y_wire - wire_hole_d/2 > y_pk1 + 0.3, "wire holes miss the plug space");
+echo(str("z_ax ", z_ax, "  y_col0 ", y_col0, "  y_f ", y_f, "  y_srear ", y_srear, "  y_pk1 ", y_pk1, "  y_bk0 ", y_bk0, "  y_r ", y_r, "  y_wire ", y_wire, "  r_t ", r_t));
+
+echo(str("Puck height: ", body_h, "  Cap length: ", cap_h, "  Tube: y ", y_r, " .. ", y_f + th_len));
+echo(str("Overall height: ", body_h - 0.4 + bezel_plate - (z_ax - r_t),
+         "   length: ", y_f + cap_h + nose_len - cap_floor_t + bz_od/2,
+         "   with the diverter: ", y_f + cap_h + div_len + bz_od/2));
 
 /* =====================================================================
    Helical thread: horizontal cross-section r(θ) extruded with twist.
@@ -180,11 +217,16 @@ module thread_solid(rmin, d, len, pitch, starts = 1) {
 }
 
 /* ============================== BODY ================================= */
+// The display puck. Flat bottom: it sits on the tube's flat top and is held
+// by two M2x6 pan-head self-tapping screws driven down through its floor.
 module body() {
     difference() {
         union() {
-            // main tube (above spigot), stepped rim at the top for the bezel
-            translate([0, 0, th_len]) cylinder(d = od, h = z_rim0 - th_len);
+            // main shell (small chamfer at the bottom edge), stepped rim at the top
+            hull() {
+                translate([0, 0, 0.6]) cylinder(d = od, h = z_rim0 - 0.6);
+                cylinder(d = od - 1.2, h = 0.6 + eps);
+            }
             // threaded rim for the bezel (lead-in chamfer at the top)
             translate([0, 0, z_rim0 - eps]) intersection() {
                 thread_solid(rim_od/2 - bz_depth, bz_depth, rim_h + eps, bz_pitch, bz_starts);
@@ -193,35 +235,16 @@ module body() {
                     translate([0, 0, rim_h - 0.8 - eps]) cylinder(d1 = rim_od + 1, d2 = rim_od - 2*bz_depth - 0.6, h = 0.8 + 2*eps);
                 }
             }
-            // threaded spigot (male, 4-start) with a lead-in chamfer
-            intersection() {
-                thread_solid(th_major/2 - th_depth, th_depth, th_len + eps, th_pitch, th_starts);
-                union() {
-                    translate([0, 0, -0.05]) cylinder(d1 = th_major - 2*th_depth - 0.6, d2 = th_major + 0.6, h = 1.25);
-                    translate([0, 0, 1.2 - eps]) cylinder(d = th_major + 1, h = th_len);
-                }
-            }
         }
 
-        // spigot bore (sensor Molex + wiring space, battery passes through)
-        translate([0, 0, -eps]) cylinder(d = spigot_id, h = th_len + 2*eps);
-
-        // battery pocket (opens downward) + side channel for its plug/leads
-        translate([0, 0, z_batt0 - eps]) {
-            translate([-batt_l/2 - 0.4, -batt_w/2 - 0.4, 0])
-                cube([batt_l + 0.8, batt_w + 0.8, batt_zone + eps]);
-            translate([-9, batt_w/2, 0]) cube([18, 6.0, batt_zone + eps]);
-            translate([0, -batt_w/2 - 0.4, 0]) scale([1, 0.45, 1])
-                cylinder(r = 7, h = batt_zone * 0.6);
+        // screw holes to the tube, and the wire holes (sensor + battery leads)
+        for (s = [-1, 1]) {
+            translate([s * screw_x, 0, -eps]) cylinder(d = screw_hole, h = floor_t + 2*eps, $fn = 24);
+            translate([s * 5, y_wire, -eps]) cylinder(d = wire_hole_d, h = floor_t + 2*eps, $fn = 32);
         }
-
-        // wire pass-throughs in the floor: battery leads + sensor leads
-        translate([ 6, batt_w/2 + 3, z_floor - 1]) cylinder(d = 4.2, h = floor_t + 2, $fn = 32);
-        translate([-6, batt_w/2 + 3, z_floor - 1]) cylinder(d = 4.2, h = floor_t + 2, $fn = 32);
 
         // ADS1115 + under-PCB component cavity
         translate([0, 0, z_cav0]) cylinder(d = cav_bore, h = z_pcb - z_cav0 + eps);
-        translate([-ads_l/2, -ads_w/2 - 3, z_cav0 - 0.6]) cube([ads_l, ads_w, 1]);
 
         // display seat: the round board and its USB-C tab, joined by a smooth
         // taper (the board's outline flares where the tab meets the circle).
@@ -243,13 +266,6 @@ module body() {
         // flexure power button: U-slot through the wall + thinned tab
         rotate([0, 0, btn_angle]) button_cut();
 
-        // thread relief at the shoulder: the cap's top turn can run fully home
-        translate([0, 0, th_len - 0.8]) difference() {
-            cylinder(d = th_major + 2, h = 0.8 + eps);
-            translate([0, 0, -eps]) cylinder(d = th_major - 2*th_depth, h = 1);
-        }
-
-        // top chamfer on rim inner edge (eases display insertion)
         // cover-glass pocket at the top; the ledge sits 0.15 below the glass, so
         // the board's pads carry it and the ledge only catches a press
         translate([0, 0, z_pcb + cover_under - 0.15]) cylinder(d = glass_pocket_d, h = body_h);
@@ -264,9 +280,67 @@ module body() {
     for (a = pad_angles)
         rotate([0, 0, a]) translate([pcb_d/2 - 1.2, -1.5, z_cav0])
             cube([cav_bore/2 - pcb_d/2 + 1.4, 3, z_pcb - z_cav0]);
+}
 
-    // battery latches: two spring beams inside the spigot
-    for (m = [0, 1]) mirror([m, 0, 0]) battery_latch();
+/* ============================== TUBE ================================= */
+// Under the puck, axis along +Y at z_ax. Round, with a flat top where the
+// puck sits; a full-round collar in front of the puck carries the shoulder
+// the cap seats on, then the male spigot. Inside, front to back: the bore
+// for the sensor's rear boss, the plug space, then the battery pocket.
+// Prints standing on the spigot (as exported), no supports.
+module along_y(y0, len) { translate([0, y0, z_ax]) rotate([-90, 0, 0]) children(); }   // local z -> +Y
+
+module tube() {
+    difference() {
+        union() {
+            // lower body: round, flat on top (z = 0) where the puck sits
+            intersection() {
+                along_y(y_r, 0) hull() {
+                    translate([0, 0, 1]) cylinder(r = r_t, h = y_f - y_r - 1);
+                    cylinder(r = r_t - 1, h = 1);                      // chamfered rear edge
+                }
+                translate([-r_t - 1, y_r - 1, z_ax - r_t - 1]) cube([2*r_t + 2, y_f - y_r + 2, r_t + 1 - z_ax]);
+            }
+            // full-round collar, cut back where the bezel overhangs it
+            difference() {
+                along_y(y_col0, 0) cylinder(r = r_t, h = y_f - y_col0);
+                translate([0, 0, z_rim0 - 0.3]) cylinder(r = bz_od/2 + 0.5, h = 30);
+            }
+            // threaded spigot (male, 4-start) with a lead-in chamfer at the tip
+            translate([0, y_f + th_len, z_ax]) rotate([90, 0, 0]) intersection() {
+                thread_solid(th_major/2 - th_depth, th_depth, th_len + eps, th_pitch, th_starts);
+                union() {
+                    translate([0, 0, -0.05]) cylinder(d1 = th_major - 2*th_depth - 0.6, d2 = th_major + 0.6, h = 1.25);
+                    translate([0, 0, 1.2 - eps]) cylinder(d = th_major + 1, h = th_len);
+                }
+            }
+        }
+
+        // plug space, running out through the spigot (the battery leaves this way)
+        translate([-plug_box_w/2, y_pk1 - eps, z_ax - plug_box_h/2]) cube([plug_box_w, y_f + th_len - y_pk1 + 1, plug_box_h]);
+        // bore for the sensor's rear boss (in front of the puck only)
+        along_y(y_col0, 0) cylinder(d = boss_bore, h = y_f + th_len - y_col0 + 1);
+        // the spigot mouth opens out (45°) around the sensor's rear taper
+        along_y(y_f + th_len - 4, 0) cylinder(d1 = boss_bore, d2 = th_major - 2*th_depth - 5.0, h = 4 + eps);
+        translate([0, y_f + th_len - eps, z_ax]) rotate([-90, 0, 0]) cylinder(d = th_major - 2*th_depth - 5.0, h = 1);
+        // battery pocket
+        translate([-batt_w/2 - batt_clear, y_bk0, z_ax - batt_t/2 - batt_clear])
+            cube([batt_w + 2*batt_clear, batt_pk_l + eps, batt_t + 2*batt_clear]);
+        // wire holes up into the puck, screw pilot holes
+        for (s = [-1, 1]) {
+            translate([s * 5, y_wire, z_ax + plug_box_h/2 - eps]) cylinder(d = wire_hole_d, h = tube_top_wall + 2*eps, $fn = 32);
+            translate([s * screw_x, 0, -7]) cylinder(d = screw_pilot, h = 7 + eps, $fn = 16);
+        }
+        // shoulder relief so the cap's last turn runs fully home
+        translate([0, y_f - eps, z_ax]) rotate([-90, 0, 0]) difference() {
+            cylinder(d = th_major + 2, h = 0.8 + eps);
+            translate([0, 0, -eps]) cylinder(d = th_major - 2*th_depth, h = 1);
+        }
+    }
+    // lip across the front of the battery pocket floor: lift the battery's
+    // front end over it to slide the battery out
+    translate([-batt_w/2 - batt_clear, y_pk1 - batt_lip, z_ax - batt_t/2 - batt_clear - eps])
+        cube([batt_w + 2*batt_clear, batt_lip, batt_lip + eps]);
 }
 
 // annular sector between radii r0..r1, angles a0..a1 (deg), heights z0..z1
@@ -317,23 +391,6 @@ module button_nub() {
     }
 }
 
-/* ---- battery latches ---- */
-latch_x    = batt_l/2 + 0.5;   // beam inner face (just behind the pocket wall)
-latch_t    = 1.0;              // beam thickness (flex direction)
-latch_w    = 6.0;
-latch_hook = 1.0;              // how far the hook reaches under the battery edge (0.5 overlap)
-latch_z0   = 0.8;
-
-module battery_latch() {
-    r_wall = spigot_id/2;
-    translate([latch_x, -latch_w/2, latch_z0])
-        cube([sqrt(r_wall*r_wall - (latch_w/2)*(latch_w/2)) - latch_x + 0.6, latch_w, 1.5]);
-    translate([latch_x, -latch_w/2, latch_z0]) cube([latch_t, latch_w, z_batt0 + 0.6 - latch_z0]);
-    translate([0, latch_w/2, 0]) rotate([90, 0, 0]) linear_extrude(latch_w)
-        polygon([[latch_x, z_batt0 - 1.8], [latch_x - latch_hook, z_batt0 - 0.8],
-                 [latch_x - latch_hook, z_batt0 + 0.0], [latch_x, z_batt0 + 0.6]]);
-}
-
 /* ============================== BEZEL ================================ */
 // Screws onto the threaded rim (3-start, about 3/4 turn) and seats on the
 // rim's top face, just above the cover glass, so the glass and board can't
@@ -360,40 +417,37 @@ module bezel() {
 }
 
 /* =============================== CAP ================================= */
-// Full width only where it screws onto the body; below that it tapers in to
-// follow the sensor with cap_wall all round, ending near the diverter's size.
-// Prints open end up; the taper is under 45° so it needs no supports.
+// Slim all the way: cap_wall around the sensor body and flange, then the
+// thread band (the same diameter as the tube). Prints open end up; the
+// taper is under 45° so it needs no supports.
 module cap() {
     tot  = cap_h;
     r_fb = s_bore_flange/2;                  // flange bore radius
     r_lo = s_bore_body/2 + cap_wall;         // around the sensor body
     r_mi = r_fb + cap_wall;                  // around the flange
-    z_c1 = z_sh + sensor_h;                  // full width from here up (plug headroom + thread)
-    z_c0 = z_c1 - (od/2 - r_mi) * 1.2;       // taper start (~40° from vertical)
+    z_t0 = tot - th_len - th_relief;         // thread band (full width) from here up
+    z_c0 = z_t0 - (r_t - r_mi) * 1.2;        // taper start (~40° from vertical)
     difference() {
         rotate_extrude($fn = 128) polygon([
             [0, 0], [r_lo - 0.6, 0], [r_lo, 0.6],
             [r_lo, z_flange0 - (r_mi - r_lo) - 0.1], [r_mi, z_flange0 - 0.1],
-            [r_mi, z_c0], [od/2, z_c1], [od/2, tot], [0, tot]]);
+            [r_mi, z_c0], [r_t, z_t0], [r_t, tot], [0, tot]]);
         // floor hole: the O-ring seals here
         translate([0, 0, -eps]) cylinder(d = oring_bore, h = z_sh + 2*eps);
         translate([0, 0, z_sh - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
-        // sensor body bore, then flange bore up to the back of the sensor
+        // sensor body bore, then the flange bore
         translate([0, 0, z_sh]) cylinder(d = s_bore_body, h = s_body_h + eps);
-        translate([0, 0, z_flange0]) cylinder(d = 2*r_fb, h = sensor_h - s_body_h + eps);
-        // Molex plug headroom
-        translate([0, 0, z_c1 - eps]) cylinder(d = th_major - 2*th_depth + 2*th_clear - 0.2, h = cav_above + 2*eps);
-
-        // ---- body thread (female, 4-start) ----
+        translate([0, 0, z_flange0]) cylinder(d = 2*r_fb, h = z_t0 - z_flange0 + eps);
+        // relief below the thread: room for the spigot tip so the cap seats on the shoulder
+        translate([0, 0, z_t0 - eps]) cylinder(d = th_major + 2*th_clear + 0.4, h = th_relief + 2*eps);
+        // ---- spigot thread (female, 4-start) ----
         translate([0, 0, tot - th_len])
             thread_solid(th_major/2 - th_depth + th_clear, th_depth, th_len + eps, th_pitch, th_starts);
         translate([0, 0, tot - 1.0]) cylinder(d1 = th_major - 2*th_depth + 2*th_clear - 0.6, d2 = th_major + 2*th_clear + 0.8, h = 1 + eps);
-        // relief below the thread: room for the spigot so the cap seats on the shoulder
-        translate([0, 0, tot - th_len - th_relief]) cylinder(d = th_major + 2*th_clear + 0.4, h = th_relief + eps);
 
-        // grip flutes on the full-width band
+        // grip flutes on the thread band
         for (i = [0 : 17]) rotate([0, 0, i * 20])
-            translate([od/2 + 0.6, 0, z_c1 + 0.6]) cylinder(d = 2.4, h = tot - z_c1, $fn = 16);
+            translate([r_t + 0.5, 0, z_t0 + 0.6]) cylinder(d = 2.0, h = tot - z_t0, $fn = 16);
     }
 }
 
@@ -407,7 +461,7 @@ module teardrop_x(d, len) {
 
 /* ===================== FIT TEST (print first) ======================== */
 // Display seat ring, sensor seat (cap floor + body bore), flange ring, and
-// 4 mm of the body/cap thread.
+// 4 mm of the tube/cap thread (male ring + female ring).
 module fit_test() {
     translate([-4, 0, 0]) difference() {          // display seat: drop the board in (tab and switch into their notches),
                             // with the cover-glass pocket as a step on top
@@ -425,15 +479,29 @@ module fit_test() {
         translate([0, 0, z_sh - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
         translate([0, 0, z_sh]) cylinder(d = s_bore_body, h = 4);
     }
-    // flange bore ring
-    translate([90, 0, 0]) difference() {
+    // flange bore ring: the flange should drop through the female ring below too
+    translate([88, 0, 0]) difference() {
         cylinder(d = s_bore_flange + 2*cap_wall, h = 2);
         translate([0, 0, -eps]) cylinder(d = s_bore_flange, h = 3);
     }
-    translate([0, 54, 0]) intersection() { body(); cylinder(d = od + 1, h = 4); }
-    translate([54, 54, 0]) difference() {
-        cylinder(d = od, h = 4);
+    // thread pair: male (as on the tube's spigot) and female (as in the cap)
+    translate([0, 50, 0]) difference() {
+        union() {
+            intersection() {
+                thread_solid(th_major/2 - th_depth, th_depth, 4, th_pitch, th_starts);
+                union() {
+                    translate([0, 0, -0.05]) cylinder(d1 = th_major - 2*th_depth - 0.6, d2 = th_major + 0.6, h = 1.25);
+                    translate([0, 0, 1.2 - eps]) cylinder(d = th_major + 1, h = 4);
+                }
+            }
+            translate([0, 0, 4 - eps]) cylinder(r = r_t, h = 1.5);      // shoulder
+        }
+        translate([0, 0, -eps]) cylinder(d = th_major - 2*th_depth - 4, h = 6);
+    }
+    translate([42, 50, 0]) difference() {
+        cylinder(r = r_t, h = 4);
         translate([0, 0, -eps]) thread_solid(th_major/2 - th_depth + th_clear, th_depth, 4 + 2*eps, th_pitch, th_starts);
+        translate([0, 0, 4 - 1.0]) cylinder(d1 = th_major - 2*th_depth + 2*th_clear - 0.6, d2 = th_major + 2*th_clear + 0.8, h = 1 + eps);
     }
 }
 
@@ -461,24 +529,29 @@ module dummy_display() {
 }
 
 /* ============================ Output ================================= */
+// cap frame -> assembly: cap z axis points back (-Y), its top on the shoulder
+module at_cap(dy = 0) { translate([0, y_f + cap_h + dy, z_ax]) rotate([90, 0, 0]) children(); }
+
 module assembly(explode = 0) {
     color("#3a6ea5") body();
+    color("#4f86c0") translate([0, 0, -explode * 0.8]) tube();
     translate([0, 0, z_rim0 + explode * 1.2]) color("#2c2c2c") bezel();
     translate([0, 0, z_pcb + explode * 0.8]) dummy_display();
-    color("purple") translate([-ads_l/2, -ads_w/2 - 3, z_cav0]) cube([ads_l, ads_w, 1.6]);
-    color("orange") translate([-batt_l/2, -batt_w/2, z_batt0 + 0.3 - explode * 0.5]) cube([batt_l, batt_w, batt_t]);
-    translate([0, 0, z_cap_in_body - explode * 2]) {
+    color("purple") translate(ads_pos + [0, 0, explode * 0.4]) cube([ads_w, ads_l, 1.6]);
+    color("orange") translate([-batt_w/2, y_bk0 + batt_clear - explode * 1.5, z_ax - batt_t/2 - explode * 0.8]) cube([batt_w, batt_l, batt_t]);
+    translate([0, 0, -explode * 0.8]) at_cap(explode * 1.5) {
         color("#e0e0e0") cap();
-        translate([0, 0, z_sh + explode * 1.2]) dummy_sensor();
+        translate([0, 0, z_sh + explode * 0.8]) dummy_sensor();
         if (show_diverter)
-            color("#1f9e8f") translate([0, 0, -div_len - explode * 1.4]) diverter();
+            color("#1f9e8f") translate([0, 0, -div_len - explode * 1.0]) diverter();
     }
 }
 
 if (PART == "assembly")        assembly(0);
 else if (PART == "exploded")   assembly(18);
-else if (PART == "section")    difference() { assembly(0); translate([-60, 0, -80]) cube([120, 60, 160]); }
+else if (PART == "section")    difference() { assembly(0); translate([0, -80, -60]) cube([80, 200, 120]); }
 else if (PART == "body")       body();
+else if (PART == "tube")       translate([0, 0, y_f + th_len]) rotate([-90, 0, 0]) tube();   // spigot down
 else if (PART == "bezel")      translate([0, 0, rim_h + bezel_plate]) rotate([180, 0, 0]) bezel();
 else if (PART == "cap")        cap();
 else if (PART == "fit_test")   fit_test();

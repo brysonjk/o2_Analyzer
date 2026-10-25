@@ -176,17 +176,20 @@ s_rear_in_cap = z_sh + sensor_h;           // sensor rear face (sticks out of th
 z_ax      = -(plug_box_h/2 + tube_top_wall);           // tube axis height
 chin_gap  = 0.3;                                        // between the puck's chin and the tube's collar
 y_col0    = od/2 + chin_gap;                            // full-round collar starts in front of the puck
-y_f       = (z_ax + r_t > z_rim0 - 0.2 ? bz_od/2 : od/2) + 0.6;   // spigot shoulder, clear of the bezel
+collar_wall = 2.0;                                      // solid back wall of the collar, behind the boss bore
+y_f       = max((z_ax + r_t > z_rim0 - 0.2 ? bz_od/2 : od/2) + 0.6,   // spigot shoulder, clear of the bezel,
+                y_col0 + collar_wall + 0.3 + (s_rear_in_cap - cap_h));  // and far enough forward that the boss bore stays inside the collar
 y_srear   = y_f - (s_rear_in_cap - cap_h);              // sensor rear face
 y_pk1     = y_srear - plug_clear;                       // battery pocket front (plug space ahead of it)
 batt_pk_l = batt_l + 2*batt_clear + batt_lip;
 y_bk0     = y_pk1 - batt_pk_l;                          // battery pocket rear
 y_r       = y_bk0 - tube_end_wall;                      // tube rear face
+y_bore0   = y_srear - 0.3;                              // boss bore starts here (inside the collar)
 y_wire    = min((y_pk1 + y_col0)/2, sqrt(pow(cav_bore/2, 2) - 25) - wire_hole_d/2 - 0.3);
 boss_bore = s_boss_d + 1.6;
 
 assert(!use_inserts || -insert_depth > z_ax + batt_t/2 + batt_clear + 0.05, "insert holes would break into the battery pocket");
-assert(y_srear > y_col0 + 0.5, "sensor boss would reach the plug space under the puck");
+assert(y_bore0 >= y_col0 + collar_wall - 0.01, "boss bore would break out of the collar's back face");
 assert(y_wire - wire_hole_d/2 > y_pk1 + 0.3, "wire holes miss the plug space");
 echo(str("z_ax ", z_ax, "  y_col0 ", y_col0, "  y_f ", y_f, "  y_srear ", y_srear, "  y_pk1 ", y_pk1, "  y_bk0 ", y_bk0, "  y_r ", y_r, "  y_wire ", y_wire, "  r_t ", r_t));
 
@@ -332,8 +335,9 @@ module tube() {
 
         // plug space, running out through the spigot (the battery leaves this way)
         translate([-plug_box_w/2, y_pk1 - eps, z_ax - plug_box_h/2]) cube([plug_box_w, y_f + th_len - y_pk1 + 1, plug_box_h]);
-        // bore for the sensor's rear boss (in front of the puck only)
-        along_y(y_col0, 0) cylinder(d = boss_bore, h = y_f + th_len - y_col0 + 1);
+        // bore for the sensor's rear boss; it rises above the tube's flat top, so
+        // it starts collar_wall inside the collar and never breaks out of it
+        along_y(y_bore0, 0) cylinder(d = boss_bore, h = y_f + th_len - y_bore0 + 1);
         // the spigot mouth opens out (45°) around the sensor's rear taper
         along_y(y_f + th_len - 4, 0) cylinder(d1 = boss_bore, d2 = th_major - 2*th_depth - 5.0, h = 4 + eps);
         translate([0, y_f + th_len - eps, z_ax]) rotate([-90, 0, 0]) cylinder(d = th_major - 2*th_depth - 5.0, h = 1);

@@ -71,13 +71,13 @@ The puck and the tube are separate prints so that both threads print upright: th
 - A 1S LiPo, 602030 or similar, with a JST-1.25 2-pin plug
 - A short JST-1.25 2-pin extension (male/female). Its battery-side plug sits in the plug space in the tube, so you can swap the battery without opening the puck.
 - 2× M2 heat-set inserts (3 mm long, 3.0 mm across) and 2× M2×4 pan-head screws, to join the puck and the tube. If you'd rather skip the inserts, set `use_inserts = false` and use 2× M2×6 self-tapping screws instead.
-- Four thin wires (about 28–30 AWG silicone) soldered to the board's 4-pin SH 1.0 connector. There's no room in the body for a plug in that side-entry connector, so solder the wires directly to its pins, or remove the connector and solder to its pads.
+- A 4-pin JST-SH 1.0 mm pigtail (pre-crimped plug with short wires) for the board's I2C/UART connector. The puck has a slot and a wire pocket for the plugged-in cable, so the board unplugs from the ADS1115 without soldering. The pocket is sized for a plug 7 × 3 mm whose back sits 1.8 mm past the board edge (`sh_plug_*`); soldering wires straight to the connector's pins still works too.
 - Optional: 2× 100 kΩ resistors and a 100 nF capacitor for the battery gauge
 
 ## Wiring
 | From | To | Notes |
 |---|---|---|
-| Board SH-connector pin **3V3** | ADS1115 VDD | Solder to the pins, no plug (see the bill of materials) |
+| Board SH-connector pin **3V3** | ADS1115 VDD | Through the SH pigtail; check its wire colours against the board's pin labels |
 | Board SH-connector pin **GND** | ADS1115 GND **and** ADDR | ADDR to GND sets I2C address 0x48 |
 | Board SH-connector pin **RX (GPIO20)** | ADS1115 SDA | The C3 lets you route I2C to any pin. The breakout already has pull-ups. |
 | Board SH-connector pin **TX (GPIO21)** | ADS1115 SCL | |
@@ -99,7 +99,7 @@ USB-C charges the battery and programs the board. While USB is plugged in, the b
 ## Assembly
 1. **Join the puck and the tube.** Press the two heat-set inserts into the holes in the tube's flat top with a soldering iron (about 220 °C for PETG). Push them in flush or a little below the surface, never proud of it, or the puck won't sit flat. If one ends up proud, file it flush. Then set the puck's flat bottom on the tube's flat top, with the puck's USB-C slot over the tube's back end and the two wire holes lined up, and drive the 2× M2×4 screws down through the puck floor into the inserts. Do this first, while the puck is empty.
 2. Solder the wires to the ADS1115. Leave the sensor and battery leads long, and feed them down through the two wire holes into the tube's plug space, then out through the spigot. Leave the sensor leads about 3 cm longer than the straight run: the cap turns a little under one turn, and that slack takes up the twist. Fix the ADS1115 to the puck floor with double-sided foam tape, long side front to back, clear of the screw heads.
-3. Solder the four ADS1115 wires to the board's SH connector pins, at the lower right with the display facing you, and plug the battery extension into the board. Drop the board in, display up, so it rests on the three support pads with the USB-C lined up with its slot at the back. The 42 mm cover glass settles into the pocket at the top, level with the rim. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall.
+3. Plug the SH pigtail into the board's 4-pin connector, at the lower right with the display facing you, and solder its other end to the ADS1115. Plug the battery extension into the board. Drop the board in, display up, with the SH plug lined up with its slot in the seat (it then sits over a small pocket where its wires bend down), so it rests on the three support pads with the USB-C lined up with its slot at the back. The 42 mm cover glass settles into the pocket at the top, level with the rim. The on/off switch, on the board's left edge, lines up with the flexible tab in the wall.
 4. Screw the bezel onto the rim clockwise, about three-quarters of a turn, until it seats firmly on the rim's top edge. Snug by hand is enough.
 5. Plug the battery into the extension, then slide the battery into the tube through the spigot, lying flat with its leads at the front end, until it drops past the small lip at the front of its pocket. Tuck the extension's plug into the plug space. To take the battery out, lift its front end over the lip and slide it out; a loop of tape stuck to its front end makes a handy pull tab.
 6. Plug the Molex into the back of the sensor. Drop the sensor nose-first into the cap so its shoulder sits on the floor and the O-ring presses into the floor hole. The threaded nose sticks out the front.

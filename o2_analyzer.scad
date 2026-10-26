@@ -58,7 +58,11 @@ usb_h          = 3.8;
 usb_plug_w     = 12.8;   // USB-C plug overmould, for the recess outside the slot
 usb_plug_h     = 6.2;
 btn_angle      = 180;    // IP5306 on/off switch: left edge with the display facing you, USB-C down
-sh_angle       = 332;    // 4-pin SH 1.0 connector (lower right); wires are soldered to it, no plug
+sh_angle       = 332;    // 4-pin SH 1.0 connector (lower right), under the board, side entry
+sh_plug_out    = 1.8;    // a plugged-in SH cable: back of the plug, past the board edge (measured)
+sh_plug_w      = 7.0;    // plug width (measured, widest part)
+sh_plug_h      = 3.0;    // plug height (measured)
+sh_bend        = 1.5;    // room behind the plug for its wires to bend down
 pad_angles     = [30, 150, 300];   // PCB support pads: clear of USB-C, switch, SH connector, ESP module
 btn_z_off      = 1.6;    // button centre below PCB bottom face
 btn_reach      = 19.4;   // radius the flexure nub reaches in to (switch sits at the 37 mm board edge)
@@ -275,6 +279,10 @@ module body() {
         rotate([0, 0, btn_angle]) translate([pcb_d/2 - 1, -sw_notch_w/2, z_pcb - btn_z_off - 1.5])
             cube([sw_protrude + disp_clear + 1.4, sw_notch_w, body_h - z_pcb + btn_z_off + 3]);
 
+        // SH 1.0 plug: a slot down the display seat so the board drops in with
+        // the cable plugged in, and a pocket in the cavity wall where its wires bend
+        rotate([0, 0, sh_angle]) sh_plug_cut(body_h - z_pcb + 1);
+
         // USB-C slot (opening flares outward for the plug overmould)
         rotate([0, 0, usb_angle]) translate([od/2 - 4.5, usb_off, z_pcb - usb_h/2 - 0.2]) {
             rotate([0, 90, 0]) linear_extrude(5) offset(r = 0.8) offset(delta = -0.8)
@@ -388,6 +396,18 @@ module pcb_tab_2d(off = 0) {
         translate([-pcb_tab_w/2, -pcb_tab_r]) square([pcb_tab_w, pcb_tab_r]);
 }
 
+/* ---- SH 1.0 plug clearance ---- */
+sh_r_slot = pcb_d/2 + sh_plug_out + 0.4;                // the plug's back, plus clearance
+sh_r_bend = pcb_d/2 + sh_plug_out + sh_bend;            // wire bend pocket in the cavity wall
+assert(sh_r_bend <= od/2 - 1.0, "SH plug pocket would leave the puck wall under 1 mm");
+
+module sh_plug_cut(h_up) {
+    // slot down the seat for the plug, from the board edge to just past the plug's back
+    translate([pcb_d/2 - 1, -(sh_plug_w/2 + 0.4), z_pcb - eps]) cube([sh_r_slot - pcb_d/2 + 1, sh_plug_w + 0.8, h_up]);
+    // pocket behind the plug, under the board, for the wires to turn down
+    translate([cav_bore/2 - 1, -(sh_plug_w/2 + 1.0), z_pcb - sh_plug_h - 3]) cube([sh_r_bend - cav_bore/2 + 1, sh_plug_w + 2.0, sh_plug_h + 3 + eps]);
+}
+
 /* ---- flexure button ---- */
 btn_tab_w   = 6.0;
 btn_tab_z0  = z_pcb - btn_z_off - 5.5;   // hinge (bottom)
@@ -497,6 +517,7 @@ module fit_test() {
         translate([0, 0, 2]) cylinder(d = glass_pocket_d, h = 2);
         translate([0, 0, -eps]) linear_extrude(3) seat_2d();
         rotate([0, 0, btn_angle]) translate([pcb_d/2 - 1, -sw_notch_w/2, -eps]) cube([sw_protrude + disp_clear + 1.4, sw_notch_w, 3]);
+        rotate([0, 0, sh_angle]) translate([pcb_d/2 - 1, -(sh_plug_w/2 + 0.4), -eps]) cube([sh_r_slot - pcb_d/2 + 1, sh_plug_w + 0.8, 3]);
     }
     // sensor seat: the cap floor (O-ring hole) with the body bore above it.
     // The sensor should sit on the floor with its O-ring snug in the hole,

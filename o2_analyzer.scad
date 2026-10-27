@@ -335,22 +335,23 @@ module tube() {
             // lower body under the puck: flat on top (z = 0), and it flares out from
             // the round tube to the puck's full outline, so the puck's round edge
             // carries straight down into the tube with no square corners. The rear
-            // follows the puck's circle.
+            // follows the puck's circle. The flare and the plain tube in front of it
+            // are joined first and then cut flat once, so they share no edges.
             intersection() {
-                hull() {
-                    along_y(y_r, 0) cylinder(r = r_t, h = y_flare - y_r);
+                union() {
                     intersection() {
-                        translate([0, 0, -0.01]) cylinder(d = od, h = 0.01);
-                        translate([-od, -od, -1]) cube([2*od, od + y_flare + 1, 2]);   // 1 mm past the flare: there the outline is inside the tube, so no shared edge
+                        hull() {
+                            along_y(y_r, 0) cylinder(r = r_t, h = y_flare - y_r);
+                            intersection() {      // the puck's outline, just above the cut
+                                cylinder(d = od, h = 1);
+                                translate([-od, -od, -1]) cube([2*od, od + y_flare + 1, 3]);
+                            }
+                        }
+                        cylinder(d = od, h = 200, center = true);            // rear follows the puck
                     }
+                    along_y(y_flare - 2, 0) cylinder(r = r_t, h = y_f - y_flare + 2);   // plain tube in front
                 }
-                cylinder(d = od, h = 200, center = true);                   // the puck's outline
-                translate([-od, -od, -100]) cube([2*od, 2*od, 100]);          // z <= 0
-            }
-            // in front of the flare: the plain round tube, flat on top
-            intersection() {
-                along_y(y_flare - 2, 0) cylinder(r = r_t, h = y_f - y_flare + 2);   // overlaps the flare, so they merge cleanly
-                translate([-od, -od, -100]) cube([2*od, 2*od + y_f, 100]);
+                translate([-od, -od, -100]) cube([2*od, 2*od + y_f, 100]);     // flat top at z = 0
             }
             // full-round collar in front of the puck (flat back face; the puck's
             // chin fills the curve behind it). Its top is trimmed flat, level with

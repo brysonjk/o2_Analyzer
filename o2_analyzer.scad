@@ -26,7 +26,8 @@
 //     openscad -D 'PART="body"' -o body.stl o2_analyzer.scad
 // =====================================================================
 
-PART = "assembly";   // assembly | exploded | section | body | tube | cap | bezel | fit_test
+PART = "assembly";   // assembly | exploded | section | body | tube | cap | bezel | fit_test | fit_piece
+FIT  = "seat";       // with PART = "fit_piece": seat | sensor_seat | flange_ring | thread_male | thread_female
 
 show_diverter = true;     // assembly views: show the screw-on diverter
 
@@ -58,12 +59,12 @@ usb_h          = 3.8;
 usb_plug_w     = 12.8;   // USB-C plug overmould, for the recess outside the slot
 usb_plug_h     = 6.2;
 btn_angle      = 180;    // IP5306 on/off switch: left edge with the display facing you, USB-C down
-sh_angle       = 332;    // 4-pin SH 1.0 connector (lower right), under the board, side entry
+sh_angle       = 315;    // 4-pin SH 1.0 connector (lower right), under the board, side entry (test-fitted)
 sh_plug_out    = 1.8;    // a plugged-in SH cable: back of the plug, past the board edge (measured)
 sh_plug_w      = 7.0;    // plug width (measured, widest part)
 sh_plug_h      = 3.0;    // plug height (measured)
 sh_bend        = 1.5;    // room behind the plug for its wires to bend down
-pad_angles     = [30, 150, 300];   // PCB support pads: clear of USB-C, switch, SH connector, ESP module
+pad_angles     = [30, 150, 297];   // PCB support pads: clear of USB-C, switch, SH connector + plug, ESP module
 btn_z_off      = 1.6;    // button centre below PCB bottom face
 btn_reach      = 19.4;   // radius the flexure nub reaches in to (switch sits at the 37 mm board edge)
 
@@ -510,9 +511,14 @@ module teardrop_x(d, len) {
 /* ===================== FIT TEST (print first) ======================== */
 // Display seat ring, sensor seat (cap floor + body bore), flange ring, and
 // 4 mm of the tube/cap thread (male ring + female ring).
-module fit_test() {
-    translate([-4, 0, 0]) difference() {          // display seat: drop the board in (tab and switch into their notches),
-                            // with the cover-glass pocket as a step on top
+// Each piece is its own module (and PART), so they can be printed one at a time;
+// fit_test() lays them all out together.
+fit_pieces = ["seat", "sensor_seat", "flange_ring", "thread_male", "thread_female"];
+fit_pos    = [[-4, 0, 0], [52, 0, 0], [88, 0, 0], [0, 50, 0], [42, 50, 0]];
+
+module fit_piece(name) {
+    if (name == "seat") difference() {           // display seat: drop the board in (tab, switch and
+                                                  // SH plug into their notches), glass pocket on top
         cylinder(d = glass_pocket_d + 4, h = 3.5);
         translate([0, 0, 2]) cylinder(d = glass_pocket_d, h = 2);
         translate([0, 0, -eps]) linear_extrude(3) seat_2d();
@@ -522,19 +528,19 @@ module fit_test() {
     // sensor seat: the cap floor (O-ring hole) with the body bore above it.
     // The sensor should sit on the floor with its O-ring snug in the hole,
     // and the diverter should screw on underneath and clamp it.
-    translate([52, 0, 0]) difference() {
+    if (name == "sensor_seat") difference() {
         cylinder(d = s_bore_body + 2*cap_wall, h = z_sh + 3);
         translate([0, 0, -eps]) cylinder(d = oring_bore, h = z_sh + 2*eps);
         translate([0, 0, z_sh - 0.3]) cylinder(d1 = oring_bore, d2 = oring_bore + 0.6, h = 0.3 + eps);
         translate([0, 0, z_sh]) cylinder(d = s_bore_body, h = 4);
     }
-    // flange bore ring: the flange should drop through the female ring below too
-    translate([88, 0, 0]) difference() {
+    // flange bore ring: the flange should drop through the female ring too
+    if (name == "flange_ring") difference() {
         cylinder(d = s_bore_flange + 2*cap_wall, h = 2);
         translate([0, 0, -eps]) cylinder(d = s_bore_flange, h = 3);
     }
     // thread pair: male (as on the tube's spigot) and female (as in the cap)
-    translate([0, 50, 0]) difference() {
+    if (name == "thread_male") difference() {
         union() {
             intersection() {
                 thread_solid(th_major/2 - th_depth, th_depth, 4, th_pitch, th_starts);
@@ -547,11 +553,15 @@ module fit_test() {
         }
         translate([0, 0, -eps]) cylinder(d = th_major - 2*th_depth - 4, h = 6);
     }
-    translate([42, 50, 0]) difference() {
+    if (name == "thread_female") difference() {
         cylinder(r = r_t, h = 4);
         translate([0, 0, -eps]) thread_solid(th_major/2 - th_depth + th_clear, th_depth, 4 + 2*eps, th_pitch, th_starts);
         translate([0, 0, 4 - 1.0]) cylinder(d1 = th_major - 2*th_depth + 2*th_clear - 0.6, d2 = th_major + 2*th_clear + 0.8, h = 1 + eps);
     }
+}
+
+module fit_test() {
+    for (i = [0 : len(fit_pieces) - 1]) translate(fit_pos[i]) fit_piece(fit_pieces[i]);
 }
 
 /* ======================== Reference dummies ========================== */
@@ -604,3 +614,4 @@ else if (PART == "tube")       translate([0, 0, y_f + th_len]) rotate([-90, 0, 0
 else if (PART == "bezel")      translate([0, 0, rim_h + bezel_plate]) rotate([180, 0, 0]) bezel();
 else if (PART == "cap")        cap();
 else if (PART == "fit_test")   fit_test();
+else if (PART == "fit_piece")  fit_piece(FIT);     // one fit-test piece: -D 'FIT="seat"' (see fit_pieces)

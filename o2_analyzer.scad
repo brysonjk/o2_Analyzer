@@ -113,6 +113,8 @@ bezel_plate    = 1.2;
 rim_h          = 3.8;    // threaded body rim the bezel screws onto
 rim_wall       = 1.2;    // wall between the glass pocket and the rim thread root
 glass_clear    = 0.3;    // radial room around the cover glass
+seat_lift      = 0.45;   // raises the board (and glass) without moving the rim: a print had the glass
+                         //   0.41 below the rim top, so the bezel didn't touch it. 0.45 = 0.41 + ~0.05 preload
 // screw-on bezel: 3-start thread on the rim, ~3/4 turn on, seats on the rim top
 bz_pitch       = 1.5;    // axial spacing between ridges (lead = 4.5 mm per turn)
 bz_starts      = 3;
@@ -160,9 +162,9 @@ eps = 0.01;
 z_floor   = 0;
 floor_t   = 1.2;
 z_cav0    = z_floor + floor_t;             // ADS cavity floor
-z_pcb     = z_cav0 + ads_zone + comp_h;    // PCB bottom face rests here
-z_glass   = z_pcb + cover_under + cover_t;  // cover glass top
-body_h    = z_glass + 0.1;                 // rim top, just above the glass
+z_pcb     = z_cav0 + ads_zone + comp_h + seat_lift;   // PCB bottom face rests here
+z_glass   = z_pcb + cover_under + cover_t;  // cover glass top (as modelled)
+body_h    = z_glass + 0.1 - seat_lift;     // rim top: the bezel seats here (unchanged by seat_lift)
 z_rim0    = body_h - rim_h;
 
 disp_bore = pcb_d + 2*disp_clear;
@@ -289,9 +291,12 @@ module body() {
         rotate([0, 0, usb_angle]) translate([od/2 - 4.5, usb_off, z_pcb - usb_h/2 - 0.2]) {
             rotate([0, 90, 0]) linear_extrude(5) offset(r = 0.8) offset(delta = -0.8)
                 square([usb_h + 1.0, usb_w + 0.8], center = true);
-            // recess for the plug's overmould (6.2 x 12.8), kept below the bezel thread
-            translate([3.2, 0, 0]) rotate([0, 90, 0]) linear_extrude(3) offset(r = 1) offset(delta = -1)
-                square([usb_plug_h, usb_plug_w], center = true);
+            // recess for the plug's overmould (6.2 x 12.8), trimmed to stay below the bezel thread
+            intersection() {
+                translate([3.2, 0, 0]) rotate([0, 90, 0]) linear_extrude(3) offset(r = 1) offset(delta = -1)
+                    square([usb_plug_h, usb_plug_w], center = true);
+                translate([0, -20, -20]) cube([10, 40, z_rim0 - 0.15 - (z_pcb - usb_h/2 - 0.2) + 20]);
+            }
         }
 
         // flexure power button: U-slot through the wall + thinned tab

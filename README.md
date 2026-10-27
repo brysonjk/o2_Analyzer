@@ -23,7 +23,7 @@ A handheld analyzer shaped like a T: the round display faces up on a puck, and t
 | `stl/cap.stl` | Cap. The sensor sits on its floor. Print open-end up, as exported, no supports (the taper is under 45°). |
 | `diverter.scad` → `stl/diverter.stl` | Screw-on diverter. It also holds the sensor in. Print nose-down, no supports. |
 | `stl/bezel.stl` | Screw-on display bezel. Already flipped face-down for printing. |
-| `stl/fit_test.stl` | **Print this first.** Display seat ring, sensor seat (the cap floor with its O-ring hole, plus the body bore), flange ring, and a 4 mm pair of the tube/cap thread (male ring and female ring). |
+| `stl/fit_test.3mf` | **Print this first.** One object per piece, so you can untick the ones you don't need in Bambu Studio or PrusaSlicer: display seat ring (with the switch and SH-plug notches), sensor seat (the cap floor with its O-ring hole, plus the body bore), flange ring, and a 4 mm pair of the tube/cap thread (male and female). The same pieces are in `stl/fit_test/` as separate STLs, and all together in `stl/fit_test.stl`. Regenerate them with `python3 tools/fit_test_3mf.py`. |
 | `step/*.step` | The same parts as STEP solids for Fusion 360 or SolidWorks (see CAD files below). |
 | `firmware/O2_Analyzer/O2_Analyzer.ino` | Arduino sketch. |
 
@@ -40,7 +40,8 @@ Other R-22D-type sensors may differ slightly, so check them against yours. Only 
 - `glass_d`, `glass_stack`, `comp_h` — display glass diameter, glass-to-PCB height, and the tallest component under the PCB.
 - `usb_off`: the USB-C connector sits 2.6 mm left of the tab's centre with the display facing you (−2.6).
 - `usb_angle`, `btn_angle`, `btn_z_off`, `btn_reach`: where the USB-C port and the on/off switch sit, and how far in the button nub reaches. Angles are measured looking at the display side: 0° is right, 270° is the USB-C end, and 180° puts the switch on the left.
-- `pad_angles`: where the three board support pads go. Check that the back of your board has no parts at its edge at 30°, 150° and 300°.
+- `pad_angles`: where the three board support pads go. Check that the back of your board has no parts at its edge at 30°, 150° and 297°.
+- `sh_angle`: where the board's 4-pin SH connector is (315°, test-fitted). The SH plug's slot and wire pocket follow it.
 - `batt_*` — the battery size. The default is a 602030 (nominally 6×20×30 mm, ≈300 mAh; the pocket is sized for a measured 5.96 × 20.01 × 31.01 mm cell). It lies flat in the tube and slides out through the plug space and the spigot, which pass up to about 21 × 8 mm.
 - `ads_zone` — 3.8 mm for the ADS1115 with its wires soldered flat. Raise it if your wiring stands taller.
 

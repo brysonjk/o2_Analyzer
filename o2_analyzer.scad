@@ -349,7 +349,7 @@ module tube() {
             }
             // in front of the flare: the plain round tube, flat on top
             intersection() {
-                along_y(y_flare - eps, 0) cylinder(r = r_t, h = y_f - y_flare + eps);
+                along_y(y_flare - 2, 0) cylinder(r = r_t, h = y_f - y_flare + 2);   // overlaps the flare, so they merge cleanly
                 translate([-od, -od, -100]) cube([2*od, 2*od + y_f, 100]);
             }
             // full-round collar in front of the puck (flat back face; the puck's

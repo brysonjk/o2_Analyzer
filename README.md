@@ -2,6 +2,8 @@
 
 A handheld analyzer shaped like a T: the round display faces up on a puck, and the sensor points forward out of a tube underneath it. Hold the diverter against a cylinder valve and the screen faces you, upright. It's made from **5 printed parts** (bezel, display puck, sensor tube, cap and diverter) and 2 small screws. It's 39.5 mm tall, 86.3 mm long plus the sensor's 4.8 mm threaded nose, or 99.9 mm with the diverter on. The cap unscrews in under one turn to give access to the sensor and the battery.
 
+![T-body exploded view](t_body_exploded.png)
+
 ```
   side view (sensor points right; you look at the screen from the left)
 

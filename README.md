@@ -62,7 +62,7 @@ The puck and the tube are separate prints so that both threads print upright: th
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
 | O-ring seal in the cap floor | `oring_squeeze` (0.2) | 0.15 | 0.25 |
 | Bezel thread | `bz_clear` (0.30) | 0.4 | 0.2 |
-| Power button | `btn_reach` (19.4) | — | lower it, e.g. 19.5, if a press doesn't click the switch |
+| Power button travel | `btn_reach` (18.8) | raise it (e.g. 19.0) if the button presses itself or the board sits on it | lower it (e.g. 18.6) if you still have to push too far |
 
 ## Bill of materials
 - ESP32-2424S012 (C or N version), taken out of its stock case

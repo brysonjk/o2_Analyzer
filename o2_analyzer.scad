@@ -66,7 +66,8 @@ sh_plug_h      = 3.0;    // plug height (measured)
 sh_bend        = 1.5;    // room behind the plug for its wires to bend down
 pad_angles     = [30, 150, 297];   // PCB support pads: clear of USB-C, switch, SH connector + plug, ESP module
 btn_z_off      = 1.6;    // button centre below PCB bottom face
-btn_reach      = 19.4;   // radius the flexure nub reaches in to (switch sits at the 37 mm board edge)
+btn_reach      = 18.8;   // radius the flexure nub reaches in to (switch face modelled at 18.9; was 19.4,
+                         //   which took ~1 mm of extra press). Lower = less travel; too low and it holds the switch down
 
 // R-22D type sensor (PSR-11-39-MD) — measured with calipers on a real sensor
 s_total_h      = 40.5;   // thread tip -> rear face
@@ -410,11 +411,14 @@ module sh_plug_cut(h_up) {
 }
 
 /* ---- flexure button ---- */
-btn_tab_w   = 6.0;
+btn_tab_w   = 8.0;
 btn_tab_z0  = z_pcb - btn_z_off - 5.5;   // hinge (bottom)
 btn_tab_z1  = z_pcb - 0.2;               // free end, kept below the bezel rim
 btn_slot    = 0.6;
 btn_thin    = 0.8;                       // outer recess -> tab is 1.6 thick
+btn_dome_d  = 6.4;                       // raised thumb dome on the tab
+btn_dome_h  = 1.4;                       // from the recess floor (0.6 proud of the body)
+btn_dome_z  = (btn_tab_z0 + btn_tab_z1) / 2 - 0.2;   // middle of the tab: levers the nub ~1.6x
 
 module button_cut() {
     r_in = cav_bore/2;
@@ -431,6 +435,13 @@ module button_cut() {
 
 module button_nub() {
     r_in = cav_bore/2;
+    // thumb dome on the outside of the tab (sides under 45°, prints on the wall)
+    r_fl = od/2 - btn_thin;
+    R    = (pow(btn_dome_d/2, 2) + pow(btn_dome_h, 2)) / (2 * btn_dome_h);
+    intersection() {
+        translate([r_fl + btn_dome_h - R, 0, btn_dome_z]) sphere(r = R, $fn = 64);
+        translate([r_fl - eps, -btn_dome_d, btn_dome_z - btn_dome_d]) cube([btn_dome_h + 1, 2*btn_dome_d, 2*btn_dome_d]);
+    }
     zc = z_pcb - btn_z_off;
     // tapered pin from the tab's inner face to btn_reach, 45° underside
     hull() {

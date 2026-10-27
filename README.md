@@ -62,6 +62,7 @@ The puck and the tube are separate prints so that both threads print upright: th
 | Sensor fit in the cap | `body_clear` (0.5) / `flange_clear` (0.4) | +0.2 | −0.2 |
 | O-ring seal in the cap floor | `oring_squeeze` (0.2) | 0.15 | 0.25 |
 | Bezel thread | `bz_clear` (0.30) | 0.4 | 0.2 |
+| Display glass loose under the tightened bezel | `seat_lift` (0.45) | lower it if the bezel won't seat | raise it by the gap you measure from the glass to the rim top |
 | Power button travel | `btn_reach` (18.8) | raise it (e.g. 19.0) if the button presses itself or the board sits on it | lower it (e.g. 18.6) if you still have to push too far |
 
 ## Bill of materials

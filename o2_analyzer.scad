@@ -195,13 +195,16 @@ batt_pk_l = batt_l + 2*batt_clear + batt_lip;
 z_pk1     = z_ax + batt_t/2 + batt_clear_t;            // battery pocket top
 z_pk0     = z_pk1 - batt_t - 2*batt_clear_t - batt_lip; // battery pocket floor
 y_bk0     = y_pk1 - batt_pk_l;                          // battery pocket rear
-y_r       = y_bk0 - tube_end_wall;                      // tube rear face
+y_r       = -od/2 - 1;                                 // tube rear: cut to the puck's outline
+w_flat    = sqrt(r_t*r_t - z_ax*z_ax);                  // tube half-width at its flat top (z = 0)
+y_flare   = sqrt(pow(od/2, 2) - w_flat*w_flat);         // behind this the tube flares out to the puck's outline
 y_bore0   = y_srear - 0.3;                              // boss bore starts here (inside the collar)
 y_wire    = min((y_pk1 + y_col0)/2, sqrt(pow(cav_bore/2, 2) - 25) - wire_hole_d/2 - 0.3);
 boss_bore = s_boss_d + 1.6;
 
 assert(!use_inserts || -insert_depth > z_pk1 + 0.05 || screw_x - insert_hole_d/2 - (batt_w/2 + batt_clear) > 1.2, "insert holes would break into the battery pocket");
 assert(z_pk0 >= z_ax - plug_box_h/2 - 0.01, "battery pocket floor below the plug space");
+assert(sqrt(pow(batt_w/2 + batt_clear, 2) + y_bk0*y_bk0) <= od/2 - tube_end_wall + 0.5, "battery pocket too close to the tube's rounded rear");
 assert(batt_w + 2*batt_clear <= plug_box_w, "battery won't pass through the plug space");
 assert(y_bore0 >= y_col0 + collar_wall - 0.01, "boss bore would break out of the collar's back face");
 assert(y_wire - wire_hole_d/2 > y_pk1 + 0.3, "wire holes miss the plug space");
@@ -329,13 +332,25 @@ module along_y(y0, len) { translate([0, y0, z_ax]) rotate([-90, 0, 0]) children(
 module tube() {
     difference() {
         union() {
-            // lower body: round, flat on top (z = 0) where the puck sits
+            // lower body under the puck: flat on top (z = 0), and it flares out from
+            // the round tube to the puck's full outline, so the puck's round edge
+            // carries straight down into the tube with no square corners. The rear
+            // follows the puck's circle.
             intersection() {
-                along_y(y_r, 0) hull() {
-                    translate([0, 0, 1]) cylinder(r = r_t, h = y_f - y_r - 1);
-                    cylinder(r = r_t - 1, h = 1);                      // chamfered rear edge
+                hull() {
+                    along_y(y_r, 0) cylinder(r = r_t, h = y_flare - y_r);
+                    intersection() {
+                        translate([0, 0, -0.01]) cylinder(d = od, h = 0.01);
+                        translate([-od, -od, -1]) cube([2*od, od + y_flare, 2]);
+                    }
                 }
-                translate([-r_t - 1, y_r - 1, z_ax - r_t - 1]) cube([2*r_t + 2, y_f - y_r + 2, r_t + 1 - z_ax]);
+                cylinder(d = od, h = 200, center = true);                   // the puck's outline
+                translate([-od, -od, -100]) cube([2*od, 2*od, 100]);          // z <= 0
+            }
+            // in front of the flare: the plain round tube, flat on top
+            intersection() {
+                along_y(y_flare - eps, 0) cylinder(r = r_t, h = y_f - y_flare + eps);
+                translate([-od, -od, -100]) cube([2*od, 2*od + y_f, 100]);
             }
             // full-round collar in front of the puck (flat back face; the puck's
             // chin fills the curve behind it). Its top is trimmed flat, level with
@@ -607,18 +622,21 @@ module dummy_display() {
 // cap frame -> assembly: cap z axis points back (-Y), its top on the shoulder
 module at_cap(dy = 0) { translate([0, y_f + cap_h + dy, z_ax]) rotate([90, 0, 0]) children(); }
 
+// explode: 0 = assembled; 18 = exploded (stack lifts up, tube drops, and the
+// battery, sensor, cap and diverter come off the front in assembly order)
 module assembly(explode = 0) {
+    k = explode / 18;
     color("#3a6ea5") body();
-    color("#4f86c0") translate([0, 0, -explode * 0.8]) tube();
-    translate([0, 0, z_rim0 + explode * 1.2]) color("#2c2c2c") bezel();
-    translate([0, 0, z_pcb + explode * 0.8]) dummy_display();
-    color("purple") translate(ads_pos + [0, 0, explode * 0.4]) cube([ads_w, ads_l, 1.6]);
-    color("orange") translate([-batt_w/2, y_bk0 + batt_clear - explode * 1.5, z_pk0 + 0.05 - explode * 0.8]) cube([batt_w, batt_l, batt_t]);
-    translate([0, 0, -explode * 0.8]) at_cap(explode * 1.5) {
-        color("#e0e0e0") cap();
-        translate([0, 0, z_sh + explode * 0.8]) dummy_sensor();
+    color("#4f86c0") translate([0, 0, -22 * k]) tube();
+    translate([0, 0, z_rim0 + 30 * k]) color("#2c2c2c") bezel();
+    translate([0, 0, z_pcb + 18 * k]) dummy_display();
+    color("purple") translate(ads_pos + [0, 0, 8 * k]) cube([ads_w, ads_l, 1.6]);
+    color("orange") translate([-batt_w/2, y_bk0 + batt_clear + 52 * k, z_pk0 + 0.05 - 22 * k]) cube([batt_w, batt_l, batt_t]);
+    translate([0, 0, -22 * k]) {
+        at_cap(100 * k) color("#e0e0e0") cap();
+        at_cap(58 * k) translate([0, 0, z_sh]) dummy_sensor();
         if (show_diverter)
-            color("#1f9e8f") translate([0, 0, -div_len - explode * 1.0]) diverter();
+            at_cap(122 * k) color("#1f9e8f") translate([0, 0, -div_len]) diverter();
     }
 }
 

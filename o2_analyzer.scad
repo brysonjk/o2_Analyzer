@@ -341,7 +341,7 @@ module tube() {
                     along_y(y_r, 0) cylinder(r = r_t, h = y_flare - y_r);
                     intersection() {
                         translate([0, 0, -0.01]) cylinder(d = od, h = 0.01);
-                        translate([-od, -od, -1]) cube([2*od, od + y_flare, 2]);
+                        translate([-od, -od, -1]) cube([2*od, od + y_flare + 1, 2]);   // 1 mm past the flare: there the outline is inside the tube, so no shared edge
                     }
                 }
                 cylinder(d = od, h = 200, center = true);                   // the puck's outline

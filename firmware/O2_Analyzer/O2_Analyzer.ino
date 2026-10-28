@@ -53,7 +53,7 @@ const int   AVG_N           = 20;     // 2 s rolling window
 Arduino_DataBus *bus = new Arduino_ESP32SPI(PIN_TFT_DC, PIN_TFT_CS, PIN_TFT_SCK, PIN_TFT_MOSI, GFX_NOT_DEFINED);
 // Quarter turns (0-3). In the T body the USB-C faces you and the sensor points
 // away; pick the value that makes the text upright in that orientation.
-#define DISPLAY_ROTATION 0
+#define DISPLAY_ROTATION 2
 Arduino_GFX *panel   = new Arduino_GC9A01(bus, GFX_NOT_DEFINED, DISPLAY_ROTATION, true /*IPS*/);
 Arduino_GFX *gfx     = new Arduino_Canvas(240, 240, panel);   // off-screen buffer -> no flicker
 

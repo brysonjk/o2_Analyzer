@@ -26,10 +26,11 @@
 //     openscad -D 'PART="body"' -o body.stl o2_analyzer.scad
 // =====================================================================
 
-PART = "assembly";   // assembly | exploded | section | body | tube | cap | bezel | fit_test | fit_piece
+PART = "assembly";   // assembly | exploded | section | body | tube | cap | bezel | cover | fit_test | fit_piece
 FIT  = "seat";       // with PART = "fit_piece": seat | sensor_seat | flange_ring | thread_male | thread_female
 
 show_diverter = true;     // assembly views: show the screw-on diverter
+show_cover    = false;    // assembly views: show the TPU screen cover
 
 use <diverter.scad>
 div_len = 13.59;          // diverter.scad length (its z_top); its rear face clamps the cap floor
@@ -497,6 +498,44 @@ module bezel() {
     }
 }
 
+/* ========================= SCREEN COVER (TPU) ======================== */
+// Snap-on protective cap over the bezel. The bezel (bz_od) is wider than the
+// puck below it, so a rounded bead inside the cover snaps in under the
+// bezel's edge. The bead is left out at the front, where the tube's collar
+// sits under the bezel; that gap also lets the cover stretch on and off.
+// Print in TPU (95A), top down as exported, no supports.
+cover_wall     = 1.6;    // skirt
+cover_top      = 1.6;    // plate over the bezel
+cover_fit      = 0.15;   // radial squeeze on the bezel's outside
+cover_bead_in  = 0.6;    // bead inner radius = puck radius + this (clearance to the puck wall)
+cover_front    = 32;     // half-angle of the bead gap at the front (deg)
+
+module screen_cover() {
+    zb = z_rim0;                                         // bezel's lower edge
+    zt = z_rim0 + rim_h - 0.4 + bezel_plate;             // bezel's top face
+    ri = bz_od/2 - cover_fit;                            // skirt bore
+    ro = ri + cover_wall;
+    rl = od/2 + cover_bead_in;                           // bead's innermost radius
+    bh = ri - rl;                                        // bead half-height (45° faces)
+    z0 = zb - 2*bh;                                      // cover's lower edge
+    difference() {
+        union() {
+            rotate_extrude($fn = 192) polygon([
+                [0, zt], [0, zt + cover_top], [ro - 0.8, zt + cover_top], [ro, zt + cover_top - 0.8],
+                [ro, z0 + 0.4], [ro - 0.4, z0], [ri, z0],
+                [rl, z0 + bh], [ri, zb], [ri, zt]]);
+            // pull tab at the back (over the USB-C)
+            rotate([0, 0, usb_angle]) translate([ro - 1, -5, zt + cover_top - 1.6]) hull() {
+                cube([1, 10, 1.6]);
+                translate([4, 2, 0]) cube([1, 6, 1.6]);
+            }
+        }
+        // no bead at the front, where the collar is
+        translate([0, 0, z0 - 1]) rotate([0, 0, 90 - cover_front])
+            rotate_extrude(angle = 2*cover_front, $fn = 192) translate([rl - 1, 0]) square([ro - rl + 2, zb - z0 + 1]);
+    }
+}
+
 /* =============================== CAP ================================= */
 // Slim all the way: cap_wall around the sensor body and flange, then the
 // thread band (the same diameter as the tube). Prints open end up; the
@@ -639,6 +678,7 @@ module assembly(explode = 0) {
         if (show_diverter)
             at_cap(122 * k) color("#1f9e8f") translate([0, 0, -div_len]) diverter();
     }
+    if (show_cover) color("#e8a33d", 0.85) translate([0, 0, 44 * k]) screen_cover();
 }
 
 if (PART == "assembly")        assembly(0);
@@ -648,5 +688,6 @@ else if (PART == "body")       body();
 else if (PART == "tube")       translate([0, 0, y_f + th_len]) rotate([-90, 0, 0]) tube();   // spigot down
 else if (PART == "bezel")      translate([0, 0, rim_h + bezel_plate]) rotate([180, 0, 0]) bezel();
 else if (PART == "cap")        cap();
+else if (PART == "cover")      translate([0, 0, z_rim0 + rim_h - 0.4 + bezel_plate + cover_top]) rotate([180, 0, 0]) screen_cover();   // top down
 else if (PART == "fit_test")   fit_test();
 else if (PART == "fit_piece")  fit_piece(FIT);     // one fit-test piece: -D 'FIT="seat"' (see fit_pieces)

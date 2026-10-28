@@ -575,12 +575,13 @@ function drawBigNumber(v, cx, y, col, valid) {
   drawSeg7(x, y, w, h, t, digits[2], col);
 }
 
-function centerText(s, y, size, col) {
+function centerTextAt(s, cx, y, size, col) {
   gfx.setTextSize(size); gfx.setTextColor(col);
   const w = s.length * 6 * size;
-  gfx.setCursor(120 - Math.trunc(w / 2), y);
+  gfx.setCursor(cx - Math.trunc(w / 2), y);
   gfx.print(s);
 }
+const centerText = (s, y, size, col) => centerTextAt(s, 120, y, size, col);
 
 function battPercent(v) {
   const tbl = [[4.20, 100], [4.10, 90], [4.00, 80], [3.90, 66], [3.80, 52], [3.75, 42], [3.70, 32], [3.65, 20], [3.55, 10], [3.40, 3], [3.30, 0]];
@@ -727,8 +728,12 @@ function drawScreen() {
       if (fo2 > 0.05) {
         const mod14 = Math.trunc((1.4 / fo2 - 1) * 33.0);
         const mod16 = Math.trunc((1.6 / fo2 - 1) * 33.0);
-        centerText(`MOD ${Math.max(0, mod14)} / ${Math.max(0, mod16)} ft`, 160, 2, C_FG);
-        centerText("@1.4      @1.6", 180, 1, C_DIM);
+        centerTextAt(String(Math.max(0, mod14)), 86, 156, 2, C_FG);
+        centerTextAt(String(Math.max(0, mod16)), 154, 156, 2, C_FG);
+        centerTextAt("MOD", 120, 160, 1, C_DIM);
+        centerTextAt("@1.4", 86, 176, 1, C_DIM);
+        centerTextAt("FT", 120, 176, 1, C_DIM);
+        centerTextAt("@1.6", 154, 176, 1, C_DIM);
       }
     }
   } else if (page === 1) {

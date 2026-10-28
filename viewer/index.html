@@ -133,7 +133,7 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
         <dt>Length</dt><dd id="dLen">86.3 mm + 4.8 mm sensor nose</dd>
         <dt>With diverter</dt><dd id="dDiv">99.9 mm</dd>
         <dt>Cap thread</dt><dd>M31, 4-start, 8 mm/turn</dd>
-        <dt>Printed parts</dt><dd id="dParts">5 (bezel, puck, tube, cap, diverter), 2× M2 inserts + screws</dd>
+        <dt>Printed parts</dt><dd id="dParts">5 (bezel, puck, tube, cap, diverter) + optional TPU screen cover; 2× M2 inserts + screws</dd>
       </dl>
     </section>
 
@@ -146,6 +146,7 @@ ul.parts li:last-child { border-bottom: 1px solid var(--line); }
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/STLLoader.js"></script>
 <script>
 const PARTS = [
+  { id: "cover",    name: "Screen cover (TPU)", color: 0xe8a33d, ex: [0,   0,  44], print: true, off: true },
   { id: "bezel",    name: "Bezel",             color: 0x2b3036, ex: [0,   0,  30], print: true },
   { id: "display",  name: "Round display",     color: 0x1d3f7a, ex: [0,   0,  18], ref: true },
   { id: "ads",      name: "ADS1115",           color: 0x6a3d9a, ex: [0,   0,   8], ref: true },
@@ -191,7 +192,7 @@ new MutationObserver(themeBg).observe(document.documentElement, { attributes: tr
 const list = document.getElementById("parts");
 PARTS.forEach(p => {
   const li = document.createElement("li");
-  li.innerHTML = `<label class="part${p.ref ? " ref" : ""}"><input type="checkbox" id="p-${p.id}" checked>` +
+  li.innerHTML = `<label class="part${p.ref ? " ref" : ""}"><input type="checkbox" id="p-${p.id}"${p.off ? "" : " checked"}>` +
     `<span class="sw" style="background:#${p.color.toString(16).padStart(6, "0")}"></span>` +
     `<span class="name">${p.name}</span><span class="tag">${p.print ? "print" : "ref"}</span></label>`;
   list.appendChild(li);
@@ -211,6 +212,7 @@ PARTS.forEach(p => {
     });
     const m = new THREE.Mesh(geo, mat);
     m.userData = p;
+    m.visible = !p.off;
     meshes[p.id] = m;
     group.add(m);
     if (++loaded === PARTS.length) { document.getElementById("loading").hidden = true; applyExplode(); frame(true); }

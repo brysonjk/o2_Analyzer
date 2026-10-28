@@ -141,11 +141,29 @@ The display shows:
 - warnings for a weak or missing sensor
 
 The controls are:
-- **Long-press** on the main page to calibrate to 20.9 % air.
-- **Tap** to switch to the detail page (raw mV and calibration values).
-- On the serial console, `c` calibrates to air, `o` calibrates to 100 % O2 (optional second point), and `r` resets calibration.
+- **Tap** to go to the next page: main → detail (raw mV, calibration values, battery voltage, linearity) → calibrate → main. The dots at the bottom show which page you're on.
+- **Hold** for 1.5 s on the calibrate page to take a calibration sample. Holding on the main page doesn't calibrate, so a stray press while the sensor is on a cylinder can't set a wrong calibration.
+- On the serial console, `c` does a 1-point air calibration, `o` adds the 100 % O2 point, and `r` resets calibration.
 
-Calibration is saved in flash. Recalibrate before each use, as you would with any analyzer.
+### Calibration
+The calibrate page walks through it:
+1. **Air (1-point).** With the sensor in fresh air, hold the screen. The analyzer samples until the reading has stayed stable for 5 s, then saves it and shows **AIR SAVED**. That's a complete 1-point calibration; tap to finish.
+2. **O2 (optional, 2-point).** Flow 100 % O2 over the sensor and hold again. It samples the same way and shows **2-POINT SAVED** with the sensor's linearity. Readings then follow the straight line through both points.
+
+Tap while it's sampling to cancel; nothing changes. If the reading doesn't settle within 60 s, it gives up and keeps the previous calibration.
+
+A new air calibration clears any O2 point, so an old O2 point is never paired with a fresh air point. Do the O2 step straight after the air step.
+
+**Linearity.** A galvanic cell's output is proportional to O2, so it should give 0 mV in no O2, and its O2 reading should be 100 / 20.9 = 4.78 × its air reading. After a 2-point calibration the detail and calibrate pages show:
+- **LIN**: the measured O2/air ratio as a percentage of that ideal. 100 % is perfectly linear. Below 100 % means the cell reads low at high O2 (current limiting), the usual way these cells age.
+  - Green: within ±2 % (**SENSOR LINEAR**).
+  - Orange: within ±5 % (**MARGINAL: RECHECK**).
+  - Red: beyond ±5 % (**NON-LINEAR: REPLACE**).
+- **R2**: R² of a straight-line fit through zero, air and O2. With only two points R² is always 1, so the cell's zero is used as the third point. It is shown for reference but is much less sensitive than LIN: a cell reading 10 % low on O2 still scores about 0.999.
+
+`O2_CAL_PCT` sets the O2 % of your calibration gas (100 by default; use 99.5 for medical O2 if that's what you have). `LIN_WARN_PCT` and `LIN_BAD_PCT` set the grading thresholds, and `CAL_STABLE_MS` how long the reading must hold steady before it's captured.
+
+Calibration is saved in flash. Recalibrate in air before each use, as you would with any analyzer; a 2-point calibration now and then checks the cell's health.
 
 In the T body the USB-C faces you and the sensor points away. If the text isn't upright that way, change `DISPLAY_ROTATION` (0–3, quarter turns) at the top of the sketch.
 
@@ -161,7 +179,7 @@ Gas enters through a Ø1.6 mm restrictor in the nose, passes through a small cha
 - **DIN valve:** the cone seats in the mouth of the DIN socket.
 
 **Steps:**
-1. Calibrate in air first. With the diverter on, air reaches the sensor through the vents by diffusion, so give it about a minute to settle. Or calibrate with the diverter off, which responds in seconds, but screw it back on before you measure, because it's what holds the sensor in. Wait for STABLE, then long-press to calibrate.
+1. Calibrate in air first. With the diverter on, air reaches the sensor through the vents by diffusion, so give it about a minute to settle. Or calibrate with the diverter off, which responds in seconds, but screw it back on before you measure, because it's what holds the sensor in. Then tap through to the calibrate page and hold to take the air sample.
 2. Hold the analyzer firmly against the valve outlet, then crack the valve **just** enough to hear a gentle hiss. You want roughly 1–2 L/min; the sensor is rated for 0.5–2 SCFH. Don't open it further.
 3. Wait for STABLE (about 10–20 s), then read the value.
 4. Close the valve **before** pulling the analyzer away.

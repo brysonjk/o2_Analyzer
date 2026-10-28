@@ -115,9 +115,9 @@ section.more h3 { font: 600 24px/1.1 var(--display); margin: 0 0 12px; }
 
   <div class="sim">
     <div class="stage">
-      <div class="puck"><div class="glass"><canvas id="lcd" width="480" height="480" aria-label="Simulated 240 by 240 round display. Tap to switch pages, hold for 1.5 seconds to calibrate to air."></canvas></div></div>
+      <div class="puck"><div class="glass"><canvas id="lcd" width="480" height="480" aria-label="Simulated 240 by 240 round display. Tap to switch pages; on the calibrate page, hold for 1.5 seconds to sample."></canvas></div></div>
       <div class="holdbar" aria-hidden="true"><i id="hold"></i></div>
-      <p class="touchhint">Tap the screen to switch pages · Hold 1.5 s to calibrate to air</p>
+      <p class="touchhint">Tap the screen to switch pages · On the calibrate page, hold 1.5 s to sample</p>
     </div>
 
     <div class="panel">
@@ -137,6 +137,12 @@ section.more h3 { font: 600 24px/1.1 var(--display); margin: 0 0 12px; }
         <p class="label"><span>Sensor output in air</span><b id="cellVal">10.5 mV</b></p>
         <input type="range" id="cell" min="0" max="16" step="0.1" value="10.5" aria-label="Sensor output in air, millivolts">
         <p class="note" id="cellNote">A healthy cell reads 8–14 mV in air. Below 7 mV the firmware flags it as weak. Set it to 0 to unplug the sensor.</p>
+      </section>
+
+      <section>
+        <p class="label"><span>Sensor linearity at 100 % O₂</span><b id="linVal">100 %</b></p>
+        <input type="range" id="lin" min="85" max="105" step="0.5" value="100" aria-label="Sensor output at 100 percent oxygen, as a percent of the ideal">
+        <p class="note">An ageing cell reads low at high O₂ (current limiting). Lower this, then do a 2-point calibration to see how the firmware grades it.</p>
       </section>
 
       <section>
@@ -160,7 +166,7 @@ section.more h3 { font: 600 24px/1.1 var(--display); margin: 0 0 12px; }
       <div class="bar">
         <span>Serial monitor · 115200 baud</span>
         <div class="row">
-          <button data-send="c" title="Calibrate to air (20.9 %)">c · cal air</button>
+          <button data-send="c" title="1-point calibration in air (20.9 %)">c · cal air</button>
           <button data-send="o" title="Calibrate to 100 % O2">o · cal O₂</button>
           <button data-send="r" title="Reset calibration">r · reset</button>
         </div>
@@ -173,21 +179,19 @@ section.more h3 { font: 600 24px/1.1 var(--display); margin: 0 0 12px; }
   <section class="more">
     <h3>Things to try</h3>
     <ol class="steps">
-      <li>On first boot the status line says <b>HOLD: CAL AIR</b>. With the gas set to Air, hold the screen until it shows <b>CAL 20.9% OK</b>.</li>
+      <li>On first boot the status line says <b>NOT CALIBRATED</b>. With the gas set to Air, tap twice to reach the <b>CALIBRATE</b> page and hold the screen. It samples until the reading is stable, then shows <b>AIR SAVED</b>: a 1-point calibration.</li>
       <li>Switch the gas to EAN32. The ring turns orange and the status reads <b>SETTLING</b> while the cell responds, then <b>STABLE</b> once readings hold within 0.15 % for 2 s. The MOD line shows depths at PO₂ 1.4 and 1.6.</li>
-      <li>Tap the screen for the detail page: raw millivolts, calibration values, and battery voltage.</li>
+      <li>Tap the screen for the detail page: raw millivolts, calibration values, battery voltage, and the calibration type.</li>
       <li>Drop the sensor output below 7 mV and recalibrate to see the weak-sensor warning. Untick the ADS1115 and power-cycle to see <b>NO ADC</b>.</li>
-      <li>For a two-point calibration, calibrate in air, switch to O₂, wait for it to settle, then send <code>o</code> from the serial monitor.</li>
+      <li>For a 2-point calibration, after <b>AIR SAVED</b> switch the gas to O₂ and hold again. It captures the O₂ point and shows the linearity: <b>LIN</b> is the O₂/air ratio as a % of ideal, with R² of the fit through zero, air and O₂. Lower the linearity slider to 96 % or 90 % and repeat to see it graded orange or red.</li>
     </ol>
 
     <h3>The enclosure</h3>
     <div class="gallery">
+      <figure><img src="../t_body_exploded.png" alt="Exploded view of the T-body: puck, tube and cap" loading="lazy"><figcaption>T-body, exploded</figcaption></figure>
       <figure><img src="../renders/assembly.png" alt="Assembled analyzer" loading="lazy"><figcaption>Assembled</figcaption></figure>
       <figure><img src="../renders/exploded.png" alt="Exploded view of all parts" loading="lazy"><figcaption>Exploded</figcaption></figure>
       <figure><img src="../renders/section.png" alt="Cross-section of the body and cap" loading="lazy"><figcaption>Cross-section</figcaption></figure>
-      <figure><img src="../renders/battery_latch.png" alt="Battery pocket spring latches" loading="lazy"><figcaption>Battery latches</figcaption></figure>
-      <figure><img src="../renders/diverter.png" alt="Cylinder flow diverter" loading="lazy"><figcaption>Flow diverter</figcaption></figure>
-      <figure><img src="../renders/diverter_section.png" alt="Cross-section of the flow diverter" loading="lazy"><figcaption>Diverter section</figcaption></figure>
     </div>
     <a class="cta" href="../viewer/">Open the interactive 3D model →</a>
   </section>
@@ -265,11 +269,14 @@ const FONT = [
 /* ---------- Firmware constants (O2_Analyzer.ino) ---------- */
 const AIR_O2 = 20.9, BATT_DIVIDER = 2.0, SENSOR_MIN_MV = 7.0;
 const STABLE_BAND_PCT = 0.15, SAMPLE_MS = 100, AVG_N = 20;
+const O2_CAL_PCT = 100.0, LIN_WARN_PCT = 2.0, LIN_BAD_PCT = 5.0, CAL_STABLE_MS = 5000, CAL_TIMEOUT_MS = 60000;
+const CAL_MENU = 0, CAL_AIR = 1, CAL_AIR_OK = 2, CAL_O2 = 3, CAL_O2_OK = 4;
+let calStep = CAL_MENU, calStart = 0, calStableSince = 0;
 const C_BG = 0x0000, C_FG = 0xFFFF, C_DIM = 0x52AA, C_ACCENT = 0x07FF, C_OK = 0x07E0, C_WARN = 0xFD20, C_BAD = 0xF800;
 const SEG = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F];
 
 /* ---------- Simulated hardware ---------- */
-const hw = { gasO2: 20.9, cellAirMv: 10.5, battV: 3.95, adcWired: true, touching: false, cellMv: 10.5 };
+const hw = { gasO2: 20.9, cellAirMv: 10.5, cellLin: 100, battV: 3.95, adcWired: true, touching: false, cellMv: 10.5 };
 const CELL_TAU_S = 3.0;      // first-order response: ~7 s to 90 %
 const NOISE_MV = 0.006;
 const LSB16_MV = 0.0078125;  // ADS1115 at GAIN_SIXTEEN
@@ -568,12 +575,13 @@ function drawBigNumber(v, cx, y, col, valid) {
   drawSeg7(x, y, w, h, t, digits[2], col);
 }
 
-function centerText(s, y, size, col) {
+function centerTextAt(s, cx, y, size, col) {
   gfx.setTextSize(size); gfx.setTextColor(col);
   const w = s.length * 6 * size;
-  gfx.setCursor(120 - Math.trunc(w / 2), y);
+  gfx.setCursor(cx - Math.trunc(w / 2), y);
   gfx.print(s);
 }
+const centerText = (s, y, size, col) => centerTextAt(s, 120, y, size, col);
 
 function battPercent(v) {
   const tbl = [[4.20, 100], [4.10, 90], [4.00, 80], [3.90, 66], [3.80, 52], [3.75, 42], [3.70, 32], [3.65, 20], [3.55, 10], [3.40, 3], [3.30, 0]];
@@ -583,40 +591,114 @@ function battPercent(v) {
   return 0;
 }
 
+const twoPoint = () => calMv > 0 && calO2Mv > calMv + 1.0;
 function mvToO2(mv) {
   if (calMv <= 0) return NaN;
-  if (calO2Mv > calMv + 1.0) {
-    const slope = (100.0 - AIR_O2) / (calO2Mv - calMv);
+  if (twoPoint()) {
+    const slope = (O2_CAL_PCT - AIR_O2) / (calO2Mv - calMv);
     return AIR_O2 + (mv - calMv) * slope;
   }
   return mv * AIR_O2 / calMv;
+}
+const linearityPct = () => (calO2Mv / calMv) / (O2_CAL_PCT / AIR_O2) * 100;
+function calR2() {
+  const x = [0, AIR_O2, O2_CAL_PCT], y = [0, calMv, calO2Mv];
+  const mx = (x[0] + x[1] + x[2]) / 3, my = (y[0] + y[1] + y[2]) / 3;
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < 3; i++) { sxy += (x[i] - mx) * (y[i] - my); sxx += (x[i] - mx) ** 2; syy += (y[i] - my) ** 2; }
+  return syy > 0 ? sxy * sxy / (sxx * syy) : 0;
+}
+function linColor() {
+  const dev = Math.abs(linearityPct() - 100);
+  return dev <= LIN_WARN_PCT ? C_OK : dev <= LIN_BAD_PCT ? C_WARN : C_BAD;
 }
 
 function flash(s) { msg = s.slice(0, 23); msgUntil = millis() + 2500; }
 function saveCal() { prefs.put("air", calMv); prefs.put("o2", calO2Mv); }
 function avgMv() { let s = 0; for (let i = 0; i < bufCnt; i++) s += buf[i]; return bufCnt ? s / bufCnt : 0; }
 
-function isStable() {
-  if (bufCnt < AVG_N || calMv <= 0) return false;
+function spreadMv() {
   let lo = 1e9, hi = -1e9;
   for (let i = 0; i < bufCnt; i++) { lo = Math.min(lo, buf[i]); hi = Math.max(hi, buf[i]); }
-  return (hi - lo) * AIR_O2 / calMv < STABLE_BAND_PCT;
+  return hi - lo;
+}
+function isStable() {
+  if (bufCnt < AVG_N || calMv <= 0) return false;
+  return spreadMv() * AIR_O2 / calMv < STABLE_BAND_PCT;
+}
+function isStableRaw() {
+  const mv = avgMv();
+  return bufCnt >= AVG_N && mv > 0.3 && spreadMv() < mv * STABLE_BAND_PCT / AIR_O2;
 }
 
 function calibrateAir() {
   const mv = avgMv();
-  if (mv < SENSOR_MIN_MV * 0.5) { flash("CAL FAILED"); return; }
-  calMv = mv; saveCal();
+  if (mv < SENSOR_MIN_MV * 0.5) { flash("AIR CAL FAILED"); return false; }
+  calMv = mv; calO2Mv = 0; saveCal();
   flash(mv < SENSOR_MIN_MV ? "CAL: WEAK SENSOR" : "CAL 20.9% OK");
+  return true;
 }
 
 function calibrateO2() {
-  const mv = avgMv();
-  if (calMv <= 0 || mv < calMv * 3) { flash("O2 CAL FAILED"); return; }
-  calO2Mv = mv; saveCal(); flash("CAL 100% OK");
+  const mv = avgMv(), ideal = O2_CAL_PCT / AIR_O2;
+  if (calMv <= 0) { flash("CAL AIR FIRST"); return false; }
+  if (mv < calMv * ideal * 0.8 || mv > calMv * ideal * 1.2) { flash("O2 CAL FAILED: GAS?"); return false; }
+  calO2Mv = mv; saveCal(); flash("2-POINT CAL OK");
+  return true;
+}
+
+function calStartSample(s) { calStep = s; calStart = millis(); calStableSince = 0; }
+function calTick() {
+  if (calStep !== CAL_AIR && calStep !== CAL_O2) return;
+  const now = millis(), t = now - calStart, air = calStep === CAL_AIR;
+  if (!isStableRaw()) calStableSince = 0;
+  else if (!calStableSince) calStableSince = now;
+  if (calStableSince && now - calStableSince >= CAL_STABLE_MS) {
+    if (air) calStep = calibrateAir() ? CAL_AIR_OK : CAL_MENU;
+    else     calStep = calibrateO2() ? CAL_O2_OK : CAL_AIR_OK;
+  } else if (t > CAL_TIMEOUT_MS) {
+    flash("NOT STABLE: TRY AGAIN");
+    calStep = air ? CAL_MENU : CAL_AIR_OK;
+  }
 }
 
 const f = (v, d) => isNaN(v) ? "nan" : v.toFixed(d);
+
+function drawCalPage() {
+  centerText("CALIBRATE", 44, 2, C_DIM);
+  centerText(`${f(mvNow, 2)} mV`, 70, 3, C_FG);
+  if (calStep === CAL_AIR || calStep === CAL_O2) {
+    const st = isStableRaw();
+    centerText(calStep === CAL_AIR ? "SAMPLING AIR" : "SAMPLING O2", 108, 2, C_FG);
+    if (st && calStableSince) centerText(`STABLE: CAPTURE IN ${Math.ceil((CAL_STABLE_MS - Math.min(CAL_STABLE_MS, millis() - calStableSince)) / 1000)}s`, 132, 1, C_OK);
+    else centerText("WAITING FOR STABLE", 132, 1, C_WARN);
+    if (calStep === CAL_O2) centerText(`${f(mvNow / calMv, 2)}x AIR (IDEAL ${f(O2_CAL_PCT / AIR_O2, 2)})`, 148, 1, C_DIM);
+    centerText("TAP: CANCEL", 176, 1, C_DIM);
+  } else if (calStep === CAL_AIR_OK) {
+    centerText("AIR SAVED", 104, 2, C_OK);
+    centerText("1-POINT CAL DONE", 126, 1, C_DIM);
+    centerText("FOR 2-POINT: FLOW O2,", 144, 1, C_ACCENT);
+    centerText("THEN HOLD TO SAMPLE", 156, 1, C_ACCENT);
+    centerText("TAP: FINISH", 176, 1, C_DIM);
+  } else if (calStep === CAL_O2_OK) {
+    const lin = linearityPct(), dev = Math.abs(lin - 100);
+    centerText("2-POINT SAVED", 100, 2, C_OK);
+    centerText(`LIN ${f(lin, 1)}%`, 124, 2, linColor());
+    centerText(`R2 ${f(calR2(), 4)}`, 146, 1, linColor());
+    centerText(dev <= LIN_WARN_PCT ? "SENSOR LINEAR" : dev <= LIN_BAD_PCT ? "MARGINAL: RECHECK" : "NON-LINEAR: REPLACE", 158, 1, linColor());
+    centerText("TAP: FINISH", 176, 1, C_DIM);
+  } else {
+    if (twoPoint()) {
+      centerText("NOW: 2-POINT CAL", 108, 1, C_DIM);
+      centerText(`LIN ${f(linearityPct(), 1)}%  R2 ${f(calR2(), 4)}`, 120, 1, linColor());
+    } else {
+      centerText(calMv > 0 ? "NOW: 1-POINT CAL (AIR)" : "NOT CALIBRATED", 108, 1, calMv > 0 ? C_DIM : C_WARN);
+    }
+    centerText("HOLD: START AIR CAL", 144, 1, C_ACCENT);
+    centerText("SENSOR IN FRESH AIR", 156, 1, C_DIM);
+    centerText("TAP: BACK TO MAIN", 176, 1, C_DIM);
+  }
+}
 
 function drawScreen() {
   gfx.fillScreen(C_BG);
@@ -639,42 +721,55 @@ function drawScreen() {
 
   if (page === 0) {
     centerText("O2", 50, 2, C_DIM);
-    drawBigNumber(o2Now, 112, 76, valid ? (sensorWeak ? C_WARN : C_FG) : C_DIM, valid);
-    gfx.setTextSize(3); gfx.setTextColor(C_DIM); gfx.setCursor(180, 120); gfx.print("%");
+    drawBigNumber(o2Now, 106, 76, valid ? (sensorWeak ? C_WARN : C_FG) : C_DIM, valid);
+    gfx.setTextSize(3); gfx.setTextColor(C_DIM); gfx.setCursor(188, 125); gfx.print("%");
     if (valid) {
       const fo2 = o2Now / 100;
       if (fo2 > 0.05) {
         const mod14 = Math.trunc((1.4 / fo2 - 1) * 33.0);
         const mod16 = Math.trunc((1.6 / fo2 - 1) * 33.0);
-        centerText(`MOD ${Math.max(0, mod14)} / ${Math.max(0, mod16)} ft`, 160, 2, C_FG);
-        centerText("@1.4      @1.6", 180, 1, C_DIM);
+        centerTextAt(String(Math.max(0, mod14)), 86, 156, 2, C_FG);
+        centerTextAt(String(Math.max(0, mod16)), 154, 156, 2, C_FG);
+        centerTextAt("MOD", 120, 160, 1, C_DIM);
+        centerTextAt("@1.4", 86, 176, 1, C_DIM);
+        centerTextAt("FT", 120, 176, 1, C_DIM);
+        centerTextAt("@1.6", 154, 176, 1, C_DIM);
       }
     }
-  } else {
+  } else if (page === 1) {
     centerText("DETAIL", 44, 2, C_DIM);
     centerText(`${f(mvNow, 2)} mV`, 76, 3, C_FG);
     centerText(`air cal ${f(calMv, 2)} mV`, 116, 1, C_DIM);
     if (calO2Mv > 0) centerText(`O2 cal ${f(calO2Mv, 2)} mV`, 130, 1, C_DIM);
     centerText(valid ? `${f(o2Now, 1)} %` : "--", 146, 2, C_FG);
     if (BATT_DIVIDER > 0) centerText(`batt ${f(battV, 2)} V`, 172, 1, C_DIM);
+    if (twoPoint()) centerText(`LIN ${f(linearityPct(), 1)}%  R2 ${f(calR2(), 4)}`, 186, 1, linColor());
+    else if (calMv > 0) centerText("1-POINT CAL (AIR)", 186, 1, C_DIM);
+  } else {
+    drawCalPage();
   }
 
   let st, sc;
   if (!adsOk)                { st = "NO ADC";        sc = C_BAD; }
-  else if (calMv <= 0)       { st = page ? "NOT CALIBRATED" : "HOLD: CAL AIR"; sc = C_WARN; }
+  else if (calMv <= 0)       { st = "NOT CALIBRATED"; sc = C_WARN; }
   else if (mvNow < 0.3)      { st = "NO SENSOR";     sc = C_BAD; }
   else if (sensorWeak)       { st = "SENSOR WEAK";   sc = C_WARN; }
   else if (stable)           { st = "STABLE";        sc = C_OK; }
   else                       { st = "SETTLING";      sc = C_WARN; }
+  if (page === 2)            { st = "";              sc = C_BG; }
   if (millis() < msgUntil)   { st = msg;             sc = C_ACCENT; }
   centerText(st, 200, 1, sc);
+  for (let i = 0; i < 3; i++) {
+    if (i === page) gfx.fillCircle(112 + i * 8, 218, 2, C_FG);
+    else            gfx.drawCircle(112 + i * 8, 218, 2, C_DIM);
+  }
   gfx.flush();
 }
 
 function setup() {
   bootAt = performance.now();
   buf = new Array(AVG_N).fill(0); bufIdx = 0; bufCnt = 0;
-  mvNow = 0; o2Now = 0; battV = 0; page = 0; msgUntil = 0; msg = "";
+  mvNow = 0; o2Now = 0; battV = 0; page = 0; msgUntil = 0; msg = ""; calStep = CAL_MENU;
   tSample = 0; tDraw = 0; bdiv = 0;
   touch = { down: false, downAt: 0, longDone: false };
   gfx.fillScreen(C_BG);
@@ -688,10 +783,20 @@ function handleTouch() {
   if (!hw.touching && !touch.down) return;
   const finger = hw.touching;
   if (finger && !touch.down) { touch.down = true; touch.downAt = millis(); touch.longDone = false; }
-  else if (finger && touch.down && !touch.longDone && millis() - touch.downAt > 1500) { touch.longDone = true; if (page === 0) calibrateAir(); }
+  else if (finger && touch.down && !touch.longDone && millis() - touch.downAt > 1500) {
+    touch.longDone = true;
+    if (page === 2) {
+      if (calStep === CAL_MENU || calStep === CAL_O2_OK) calStartSample(CAL_AIR);
+      else if (calStep === CAL_AIR_OK) calStartSample(CAL_O2);
+    } else if (page === 0) flash("CAL: TAP TO PAGE 3");
+  }
   else if (!finger && touch.down) {
     touch.down = false;
-    if (!touch.longDone && millis() - touch.downAt < 600) page ^= 1;
+    if (!touch.longDone && millis() - touch.downAt < 600) {
+      if (page === 2 && calStep === CAL_AIR) calStep = CAL_MENU;
+      else if (page === 2 && calStep === CAL_O2) calStep = CAL_AIR_OK;
+      else { page = (page + 1) % 3; calStep = CAL_MENU; }
+    }
   }
 }
 
@@ -703,6 +808,7 @@ function serialCommand(c) {
 
 function loop() {
   handleTouch();
+  calTick();
   if (millis() - tSample >= SAMPLE_MS) {
     tSample = millis();
     if (adsOk) {
@@ -766,6 +872,8 @@ presets.forEach(b => b.addEventListener("click", () => setGas(+b.dataset.o2)));
 
 const cellEl = document.getElementById("cell"), cellVal = document.getElementById("cellVal");
 cellEl.addEventListener("input", () => { hw.cellAirMv = +cellEl.value; cellVal.textContent = `${hw.cellAirMv.toFixed(1)} mV`; });
+const linEl = document.getElementById("lin"), linValEl = document.getElementById("linVal");
+linEl.addEventListener("input", () => { hw.cellLin = +linEl.value; linValEl.textContent = `${hw.cellLin} %`; });
 const battEl = document.getElementById("batt"), battValEl = document.getElementById("battVal");
 battEl.addEventListener("input", () => { hw.battV = +battEl.value; battValEl.textContent = `${hw.battV.toFixed(2)} V`; });
 document.getElementById("adc").addEventListener("change", e => { hw.adcWired = e.target.checked; });
@@ -806,7 +914,9 @@ function step() {
   const now = performance.now();
   const dt = Math.min(1, (now - lastT) / 1000);
   lastT = now;
-  const target = hw.cellAirMv * hw.gasO2 / AIR_O2;
+  // proportional to O2, with the gain drifting linearly from 1 at air to cellLin % at 100 % O2
+  const gain = 1 + (hw.cellLin / 100 - 1) * Math.max(0, (hw.gasO2 - AIR_O2) / (100 - AIR_O2));
+  const target = hw.cellAirMv * hw.gasO2 / AIR_O2 * gain;
   hw.cellMv += (target - hw.cellMv) * (1 - Math.exp(-dt / CELL_TAU_S));
   if (booting) bootStep(); else loop();
   holdBar.style.width = touch.down && !touch.longDone ? `${Math.min(100, (millis() - touch.downAt) / 15)}%` : "0";

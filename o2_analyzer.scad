@@ -525,9 +525,12 @@ module screen_cover() {
                 [ro, z0 + 0.4], [ro - 0.4, z0], [ri, z0],
                 [rl, z0 + bh], [ri, zb], [ri, zt]]);
             // pull tab at the back (over the USB-C)
-            rotate([0, 0, usb_angle]) translate([ro - 1.5, 0, zt + cover_top - 1.6])
-                linear_extrude(1.6) offset(r = 1.2, $fn = 32) offset(delta = -1.2)   // rounded corners
+            // (rounded corners, 1.2 mm, and 0.5 mm fillets on its top and bottom edges)
+            rotate([0, 0, usb_angle]) translate([ro - 1.5, 0, zt + cover_top - 1.6]) minkowski() {
+                translate([0, 0, 0.5]) linear_extrude(0.6) offset(r = 0.7, $fn = 32) offset(delta = -1.7)
                     polygon([[-3, -5], [0, -5], [5.5, -3], [5.5, 3], [0, 5], [-3, 5]]);   // base runs into the cover, so only the outer corners show
+                sphere(r = 0.5, $fn = 24);
+            }
         }
         // no bead at the front, where the collar is
         translate([0, 0, z0 - 1]) rotate([0, 0, 90 - cover_front])

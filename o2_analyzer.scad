@@ -525,10 +525,9 @@ module screen_cover() {
                 [ro, z0 + 0.4], [ro - 0.4, z0], [ri, z0],
                 [rl, z0 + bh], [ri, zb], [ri, zt]]);
             // pull tab at the back (over the USB-C)
-            rotate([0, 0, usb_angle]) translate([ro - 1, -5, zt + cover_top - 1.6]) hull() {
-                cube([1, 10, 1.6]);
-                translate([4, 2, 0]) cube([1, 6, 1.6]);
-            }
+            rotate([0, 0, usb_angle]) translate([ro - 1.5, 0, zt + cover_top - 1.6])
+                linear_extrude(1.6) offset(r = 1.2, $fn = 32) offset(delta = -1.2)   // rounded corners
+                    polygon([[-3, -5], [0, -5], [5.5, -3], [5.5, 3], [0, 5], [-3, 5]]);   // base runs into the cover, so only the outer corners show
         }
         // no bead at the front, where the collar is
         translate([0, 0, z0 - 1]) rotate([0, 0, 90 - cover_front])

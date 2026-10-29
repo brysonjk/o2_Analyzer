@@ -50,8 +50,6 @@ nav a[aria-current="page"] { background: var(--accent); border-color: var(--acce
   background: linear-gradient(150deg, rgba(255,255,255,.08), rgba(255,255,255,0) 40%); }
 #lcd { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; user-select: none; -webkit-user-select: none; }
 .touchhint { font: 12.5px/1.5 var(--mono); color: var(--muted); text-align: center; margin: 0; }
-.holdbar { width: min(220px, 70%); height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
-.holdbar i { display: block; height: 100%; width: 0; background: var(--accent); }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .label { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; }
@@ -61,7 +59,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
 button { font: 500 13px var(--body); padding: 6px 10px; border-radius: 6px; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--fg); }
 button:hover { border-color: var(--accent); }
 button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select { font: 500 13px var(--body); padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .note { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
@@ -115,9 +114,8 @@ section.more h3 { font: 600 24px/1.1 var(--display); margin: 0 0 12px; }
 
   <div class="sim">
     <div class="stage">
-      <div class="puck"><div class="glass"><canvas id="lcd" width="480" height="480" aria-label="Simulated 240 by 240 round display. Tap to switch pages; on the calibrate page, hold for 1.5 seconds to sample."></canvas></div></div>
-      <div class="holdbar" aria-hidden="true"><i id="hold"></i></div>
-      <p class="touchhint">Tap the screen to switch pages · On the calibrate page, hold 1.5 s to sample</p>
+      <div class="puck"><div class="glass"><canvas id="lcd" width="480" height="480" aria-label="Simulated 240 by 240 round display. Swipe left or right to change page; on the menus, tap a button."></canvas></div></div>
+      <p class="touchhint">Drag left or right to change page · Tap a button to choose it</p>
     </div>
 
     <div class="panel">
@@ -156,7 +154,11 @@ section.more h3 { font: 600 24px/1.1 var(--display); margin: 0 0 12px; }
           <label class="check"><input type="checkbox" id="adc" checked> ADS1115 wired</label>
           <button id="reboot">Power cycle</button>
         </div>
-        <p class="note">The firmware only looks for the ADC at boot, so power-cycle after changing it. Calibration survives a power cycle, as it does in the device's flash.</p>
+        <div class="row">
+          <label class="check" for="edition">Edition</label>
+          <select id="edition"><option value="fss">FSS</option><option value="kyle">Kyle Goodwin</option></select>
+        </div>
+        <p class="note">The edition changes only the startup animation; picking one replays it. The firmware only looks for the ADC at boot, so power-cycle after changing it. Calibration survives a power cycle, as it does in the device's flash.</p>
       </section>
     </div>
   </div>
@@ -179,11 +181,11 @@ section.more h3 { font: 600 24px/1.1 var(--display); margin: 0 0 12px; }
   <section class="more">
     <h3>Things to try</h3>
     <ol class="steps">
-      <li>On first boot the status line says <b>NOT CALIBRATED</b>. With the gas set to Air, tap twice to reach the <b>CALIBRATE</b> page and hold the screen. It samples until the reading is stable, then shows <b>AIR SAVED</b>: a 1-point calibration.</li>
+      <li>On first boot the status line says <b>NOT CALIBRATED</b>. With the gas set to Air, swipe (drag) left to the <b>MENU</b>, tap <b>CALIBRATE</b>, then <b>1-POINT</b>. It samples until the reading is stable, then shows <b>AIR SAVED</b>.</li>
       <li>Switch the gas to EAN32. The ring turns orange and the status reads <b>SETTLING</b> while the cell responds, then <b>STABLE</b> once readings hold within 0.15 % for 2 s. The MOD line shows depths at PO₂ 1.4 and 1.6.</li>
-      <li>Tap the screen for the detail page: raw millivolts, calibration values, battery voltage, and the calibration type.</li>
+      <li>In the menu, tap <b>DETAILS</b> to turn it on. A details page then sits between the main screen and the menu, with raw millivolts, the calibration points, the linearity and the battery voltage. The setting is remembered across power cycles.</li>
       <li>Drop the sensor output below 7 mV and recalibrate to see the weak-sensor warning. Untick the ADS1115 and power-cycle to see <b>NO ADC</b>.</li>
-      <li>For a 2-point calibration, after <b>AIR SAVED</b> switch the gas to O₂ and hold again. It captures the O₂ point and shows the linearity: <b>LIN</b> is the O₂/air ratio as a % of ideal, with R² of the fit through zero, air and O₂. Lower the linearity slider to 96 % or 90 % and repeat to see it graded orange or red.</li>
+      <li>For a 2-point calibration, choose <b>2-POINT</b>. After <b>AIR SAVED</b>, switch the gas to O₂ and tap <b>START O2</b>. It captures the O₂ point and shows the linearity: <b>LIN</b> is the O₂/air ratio as a % of ideal, with R² of the fit through zero, air and O₂. Lower the linearity slider to 96 % or 90 % and repeat to see it graded orange or red.</li>
     </ol>
 
     <h3>The enclosure</h3>
@@ -276,7 +278,7 @@ const C_BG = 0x0000, C_FG = 0xFFFF, C_DIM = 0x52AA, C_ACCENT = 0x07FF, C_OK = 0x
 const SEG = [0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F];
 
 /* ---------- Simulated hardware ---------- */
-const hw = { gasO2: 20.9, cellAirMv: 10.5, cellLin: 100, battV: 3.95, adcWired: true, touching: false, cellMv: 10.5 };
+const hw = { gasO2: 20.9, cellAirMv: 10.5, cellLin: 100, battV: 3.95, adcWired: true, touching: false, touchX: 0, touchY: 0, cellMv: 10.5 };
 const CELL_TAU_S = 3.0;      // first-order response: ~7 s to 90 %
 const NOISE_MV = 0.006;
 const LSB16_MV = 0.0078125;  // ADS1115 at GAIN_SIXTEEN
@@ -298,7 +300,10 @@ const prefs = {
 /* ---------- Firmware state ---------- */
 let bootAt = performance.now();
 const millis = () => performance.now() - bootAt;
-let calMv, calO2Mv, buf, bufIdx, bufCnt, mvNow, o2Now, battV, adsOk, page, msgUntil, msg;
+let calMv, calO2Mv, buf, bufIdx, bufCnt, mvNow, o2Now, battV, adsOk, msgUntil, msg;
+const SCR_MAIN = 0, SCR_DETAIL = 1, SCR_MENU = 2, SCR_CAL = 3;
+let screen = SCR_MAIN, showDetails = false, calTwo = false, redraw = false, lastTouch = 0;
+const MENU_TIMEOUT_MS = 30000, SWIPE_PX = 40;
 let tSample, tDraw, bdiv, touch;
 
 /* ---------- Display: 240x240 framebuffer drawn at 2x ---------- */
@@ -352,10 +357,17 @@ const gfx = {
 };
 
 /* ---------- Boot animation (mirror of bootAnimation() in the sketch) ---------- */
-const BOOT_INITIALS = "FSS";
+// The two editions (EDITION_KYLE in the sketch); picked with the Edition control, or ?edition=kyle
+const EDITIONS = { fss: { initials: "FSS", name: "" }, kyle: { initials: "", name: "KYLE GOODWIN" } };
+let BOOT_INITIALS, BOOT_NAME, BOOT_MS;
 const BOOT_TITLE = "O2 ANALYZER";
 const BOOT_LINE = "DIVE SAFE";
-const BOOT_MS = 5000;
+function setEdition(e) {
+  ({ initials: BOOT_INITIALS, name: BOOT_NAME } = EDITIONS[e] || EDITIONS.fss);
+  BOOT_MS = BOOT_NAME.length ? 7800 : 5000;
+  bootL = [];
+}
+const B_WHITE = 0xFFFF, B_GLOW = 0x022C, B_DEEP = 0x0022;
 const LOGO_MS = 3000, LOGO_IN_MS = 400, LOGO_XFADE_MS = 800;
 const logoImg = new Image();
 logoImg.src = "boot_logo.png";   // made by firmware/tools/png2rgb565.py, same pixels as boot_logo.h
@@ -434,8 +446,8 @@ function typeText(s, y, size, col, n) {
   gfx.print(s.slice(0, n));
 }
 
-function drawBootFrame(t) {
-  const WHITE = 0xFFFF, GLOW = rgb565(0, 70, 96), DEEP = rgb565(0, 4, 18), SHALLOW = rgb565(0, 46, 78);
+function drawBootClassic(t) {
+  const WHITE = B_WHITE, DEEP = B_DEEP, SHALLOW = rgb565(0, 46, 78);
   const fadeIn = ramp(t, 0, 500);
 
   // 1. Water: vertical gradient, lighter at the surface
@@ -468,6 +480,15 @@ function drawBootFrame(t) {
     const f = ramp(t, 1200, 1800), rr = 20 + 96 * easeOut(f), c = mix565(WHITE, C_ACCENT, f);
     for (let d = 0; d < 3; d++) gfx.drawCircle(120, 120, Math.round(rr) - d, mix565(c, DEEP, f * f));
   }
+
+  bootFinale(t, BOOT_LINE);
+  const iris = ramp(t, BOOT_MS - 550, BOOT_MS);
+  if (iris > 0) gfx.fillArc(120, 120, 121, Math.max(1, Math.round(121 * (1 - iris * iris))), 0, 360, C_BG);
+}
+
+// Ring sweep, initials, title and the optional small line (steps 5-8), on the classic animation's clock.
+function bootFinale(t, line) {
+  const WHITE = B_WHITE, GLOW = B_GLOW, DEEP = B_DEEP;
 
   // 5. Gauge ring sweeps round from the top, ticks light up behind it
   if (t >= 1500) {
@@ -510,7 +531,7 @@ function drawBootFrame(t) {
 
   // 7. Twinkles around the letters once they're finished
   const tDone = LT0 + (n - 1) * LSTEP + LDUR;
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 7 && n > 0; i++) {
     const h = hash32(i * 104729 + 3), st = tDone - 200 + (h % 900);
     const life = ramp(t, st, st + 500);
     if (life <= 0 || life >= 1) continue;
@@ -526,11 +547,109 @@ function drawBootFrame(t) {
     gfx.fillRect(120 - len * 6 + typed * 12, 136, 10, 14, C_ACCENT);
   }
   const lineF = ramp(t, TT + len * 45, TT + len * 45 + 500);
-  if (BOOT_LINE.length && lineF > 0) typeText(BOOT_LINE, 162, 1, mix565(DEEP, C_FG, lineF * 0.7), 99);
+  if (line.length && lineF > 0) typeText(line, 162, 1, mix565(DEEP, C_FG, lineF * 0.7), 99);
+}
 
-  // 9. Iris closes to black
+/* ---- Name animation (drawBootName in the sketch) ---- */
+let bootL = [], bootD = [], nameTop = 0, nameGlintY = 167;
+function sampleGlyph(g, x, y, w, h, sp) {
+  let carry = 0, lx = NaN, ly = NaN;
+  forEachSeg(g, x, y, w, h, (ax, ay, bx, by) => {
+    if (ax !== lx || ay !== ly) carry = 0;             // a new stroke
+    const L = Math.hypot(bx - ax, by - ay);
+    let d = carry;
+    for (; d <= L && bootD.length < 360; d += sp) bootD.push([Math.round(ax + (bx - ax) * d / Math.max(L, 0.01)), Math.round(ay + (by - ay) * d / Math.max(L, 0.01))]);
+    carry = d - L; lx = bx; ly = by;
+  });
+}
+function layoutName() {
+  const name = BOOT_NAME, len = name.length;
+  let sp = name.indexOf(" "); if (sp < 0) sp = len;
+  const n1 = sp, n2 = Math.max(0, len - sp - 1);
+  const cw1 = Math.min(32, 150 / (n1 + (n1 - 1) * 0.3)), cw2 = n2 ? Math.min(26, 176 / (n2 + (n2 - 1) * 0.3)) : 0;
+  const h1 = cw1 * 1.6, h2 = cw2 * 1.6, gapY = n2 ? 14 : 0;
+  nameTop = 116 - (h1 + gapY + h2) / 2;
+  const cws = Math.min(10, 168 / (len + (len - 1) * 0.4)), hs = cws * 1.6, xs = 120 - (len * cws + (len - 1) * cws * 0.4) / 2;
+  const keep = !BOOT_INITIALS.length, K = 0.72, top = 46;   // no initials: the name shrinks into their place
+  nameGlintY = keep ? top + (h1 + gapY + h2) * K / 2 : 167;
+  bootL = []; bootD = [];
+  for (let i = 0; i < len; i++) {
+    if (name[i] === " ") continue;
+    const second = i > sp, k = second ? i - sp - 1 : i, n = second ? n2 : n1, cw = second ? cw2 : cw1, h = second ? h2 : h1;
+    const L = { g: glyph(name[i]), bw: cw, bh: h, bx: 120 - (n * cw + (n - 1) * cw * 0.3) / 2 + k * cw * 1.3,
+                by: second ? nameTop + h1 + gapY : nameTop };
+    if (keep) Object.assign(L, { sw: cw * K, sh: h * K, sx: 120 + (L.bx - 120) * K, sy: top + (L.by - nameTop) * K });
+    else      Object.assign(L, { sw: cws, sh: hs, sx: xs + i * cws * 1.4, sy: 160 });
+    bootL.push(L);
+    sampleGlyph(L.g, L.bx + 3, L.by + 3, L.bw - 6, L.bh - 6, 5);
+  }
+}
+function bootWater(t, fadeIn) {
+  const SHALLOW = rgb565(0, 52, 88), LIGHT = rgb565(120, 210, 235);
+  for (let y = 0; y < 240; y += 3) {
+    const depth = y / 240, base = mix565(0, mix565(SHALLOW, B_DEEP, depth), fadeIn);
+    gfx.fillRect(0, y, 240, 3, base);
+    const fall = (1 - depth) * (1 - depth) * fadeIn;
+    for (let k = 0; k < 4; k++) {
+      const cx = 30 + k * 58 + 16 * Math.sin(t * 0.0007 + k * 1.7) + y * 0.32;
+      const hw = 5 + y * 0.07 + 3 * Math.sin(t * 0.0011 + k);
+      const I = fall * (0.22 + 0.12 * Math.sin(t * 0.0013 + k * 2.1));
+      gfx.fillRect(Math.round(cx - hw * 1.8), y, Math.round(hw * 3.6), 3, mix565(base, LIGHT, I * 0.45));
+      gfx.fillRect(Math.round(cx - hw), y, Math.round(hw * 2), 3, mix565(base, LIGHT, I));
+    }
+  }
+}
+function drawName(m, pen, col, glow) {
+  const e = m * m * (3 - 2 * m);
+  for (const L of bootL) {
+    const x = L.bx + (L.sx - L.bx) * e, y = L.by + (L.sy - L.by) * e, w = L.bw + (L.sw - L.bw) * e, h = L.bh + (L.sh - L.bh) * e;
+    const inset = 3 - 2 * e;
+    if (glow) traceGlyph(L.g, x + inset, y + inset, w - 2 * inset, h - 2 * inset, 1, pen + 2, glow);
+    traceGlyph(L.g, x + inset, y + inset, w - 2 * inset, h - 2 * inset, 1, pen, col);
+  }
+}
+function drawBootName(t) {
+  const WHITE = B_WHITE, DEEP = B_DEEP, BUBBLE = rgb565(110, 190, 215);
+  const T_GLINT = 2500, T_SOLID = 2800, T_MOVE = 3300, T_MOVED = 4000, SHIFT = 2300, T_GLINT2 = 6300;
+  if (!bootL.length) layoutName();
+  bootWater(t, ramp(t, 0, 500));
+  for (let i = 0; i < 10; i++) {
+    const h = hash32(i * 7919 + 17), r = 1 + h % 3, speed = 25 + (h >>> 8) % 40;
+    const y = 250 - ((t * speed / 1000 + (h >>> 16) % 260) % 270), x = 20 + (h >>> 4) % 200 + 4 * Math.sin(t * 0.004 + i);
+    gfx.drawCircle(Math.round(x), Math.round(y), r, mix565(DEEP, BUBBLE, 0.5 * ramp(t, 0, 500)));
+  }
+  if (t < T_SOLID + 400) {
+    const fade = ramp(t, T_SOLID, T_SOLID + 400), gx = -60 + 380 * ramp(t, T_GLINT, T_GLINT + 600);
+    for (let i = 0; i < bootD.length; i++) {
+      const h = hash32(Math.imul(i, 2654435761) + 99 >>> 0);
+      const sx = 20 + h % 200, sy = 250 + (h >>> 8) % 150;
+      const ta = 500 + (h >>> 16) % 1500 + (bootD[i][1] - nameTop) * 3, p = ramp(t, ta - 1200, ta);
+      if (p <= 0) continue;
+      const e = p < 0.5 ? 2 * p * p : 1 - 2 * (1 - p) * (1 - p);
+      const x = sx + (bootD[i][0] - sx) * e + 10 * Math.sin(t * 0.006 + i) * (1 - e), y = sy + (bootD[i][1] - sy) * e;
+      if (p < 1) { gfx.drawCircle(Math.round(x), Math.round(y), Math.round(2 + 2 * (1 - e)), mix565(BUBBLE, WHITE, e)); continue; }
+      let c = mix565(WHITE, C_ACCENT, ramp(t, ta, ta + 500));
+      const d = Math.abs(x - gx + (y - 120) * 0.4);
+      if (d < 18) c = mix565(c, WHITE, 1 - d / 18);
+      c = mix565(c, DEEP, fade);
+      gfx.fillCircle(Math.round(x), Math.round(y), d < 9 ? 3 : 2, c);
+    }
+    if (t >= T_GLINT && t < T_GLINT + 600) sparkle(Math.round(gx), Math.round(nameTop + 10 + 0.3 * (gx - 60)), 7, WHITE);
+  }
+  if (t >= T_SOLID) {
+    const f = ramp(t, T_SOLID, T_SOLID + 400), m = ramp(t, T_MOVE, T_MOVED), pen = BOOT_INITIALS.length ? Math.round(2 - m) : 2;
+    drawName(m, pen, mix565(mix565(B_GLOW, WHITE, f), C_ACCENT, m), mix565(DEEP, B_GLOW, f * (1 - 0.5 * m)));
+    if (t >= T_GLINT2 && t < T_GLINT2 + 700) {
+      const q = ramp(t, T_GLINT2, T_GLINT2 + 700);
+      sparkle(Math.round(30 + 180 * q), Math.round(nameGlintY), Math.round(2 + 4 * Math.sin(Math.PI * q)), WHITE);
+    }
+  }
+  if (t >= SHIFT + 1500) bootFinale(t - SHIFT, BOOT_INITIALS.length ? "" : BOOT_LINE);
   const iris = ramp(t, BOOT_MS - 550, BOOT_MS);
   if (iris > 0) gfx.fillArc(120, 120, 121, Math.max(1, Math.round(121 * (1 - iris * iris))), 0, 360, C_BG);
+}
+function drawBootFrame(t) {
+  if (BOOT_NAME.length) drawBootName(t); else drawBootClassic(t);
 }
 
 /* ---------- Ported firmware ---------- */
@@ -664,21 +783,45 @@ function calTick() {
 
 const f = (v, d) => isNaN(v) ? "nan" : v.toFixed(d);
 
+/* ---------- Buttons ---------- */
+const BTN_X = 38, BTN_W = 164, BTN_H = 36, BTN_TOP = 72, BTN_PITCH = 42;
+let pressedRow = -1;
+function drawButton(row, label, sub) {
+  const y = BTN_TOP + row * BTN_PITCH;
+  if (row === pressedRow) gfx.fillRoundRect(BTN_X, y, BTN_W, BTN_H, 8, 0x2104);
+  gfx.drawRoundRect(BTN_X, y, BTN_W, BTN_H, 8, C_ACCENT);
+  gfx.drawRoundRect(BTN_X + 1, y + 1, BTN_W - 2, BTN_H - 2, 7, C_ACCENT);
+  if (sub) { centerText(label, y + 5, 2, C_FG); centerText(sub, y + 24, 1, C_DIM); }
+  else       centerText(label, y + 11, 2, C_FG);
+}
+function buttonAt(x, y) {
+  if (x < BTN_X - 12 || x > BTN_X + BTN_W + 12) return -1;
+  for (let r = 0; r < 3; r++) {
+    const top = BTN_TOP + r * BTN_PITCH;
+    if (y >= top - 3 && y < top + BTN_H + 3) return r;
+  }
+  return -1;
+}
+
 function drawCalPage() {
   centerText("CALIBRATE", 44, 2, C_DIM);
-  centerText(`${f(mvNow, 2)} mV`, 70, 3, C_FG);
+  if (!(calStep === CAL_AIR_OK && calTwo)) centerText(`${f(mvNow, 2)} mV`, 70, 3, C_FG);
   if (calStep === CAL_AIR || calStep === CAL_O2) {
     const st = isStableRaw();
     centerText(calStep === CAL_AIR ? "SAMPLING AIR" : "SAMPLING O2", 108, 2, C_FG);
     if (st && calStableSince) centerText(`STABLE: CAPTURE IN ${Math.ceil((CAL_STABLE_MS - Math.min(CAL_STABLE_MS, millis() - calStableSince)) / 1000)}s`, 132, 1, C_OK);
     else centerText("WAITING FOR STABLE", 132, 1, C_WARN);
     if (calStep === CAL_O2) centerText(`${f(mvNow / calMv, 2)}x AIR (IDEAL ${f(O2_CAL_PCT / AIR_O2, 2)})`, 148, 1, C_DIM);
+    else centerText("KEEP SENSOR IN FRESH AIR", 148, 1, C_DIM);
     centerText("TAP: CANCEL", 176, 1, C_DIM);
+  } else if (calStep === CAL_AIR_OK && calTwo) {
+    centerText("AIR SAVED", 70, 2, C_OK);
+    centerText(`FLOW ${f(O2_CAL_PCT, 0)}% O2 OVER SENSOR`, 94, 1, C_ACCENT);
+    drawButton(1, "START O2", "WAITS FOR STABLE");
+    drawButton(2, "FINISH", "KEEP 1-POINT");
   } else if (calStep === CAL_AIR_OK) {
     centerText("AIR SAVED", 104, 2, C_OK);
     centerText("1-POINT CAL DONE", 126, 1, C_DIM);
-    centerText("FOR 2-POINT: FLOW O2,", 144, 1, C_ACCENT);
-    centerText("THEN HOLD TO SAMPLE", 156, 1, C_ACCENT);
     centerText("TAP: FINISH", 176, 1, C_DIM);
   } else if (calStep === CAL_O2_OK) {
     const lin = linearityPct(), dev = Math.abs(lin - 100);
@@ -687,28 +830,43 @@ function drawCalPage() {
     centerText(`R2 ${f(calR2(), 4)}`, 146, 1, linColor());
     centerText(dev <= LIN_WARN_PCT ? "SENSOR LINEAR" : dev <= LIN_BAD_PCT ? "MARGINAL: RECHECK" : "NON-LINEAR: REPLACE", 158, 1, linColor());
     centerText("TAP: FINISH", 176, 1, C_DIM);
-  } else {
-    if (twoPoint()) {
-      centerText("NOW: 2-POINT CAL", 108, 1, C_DIM);
-      centerText(`LIN ${f(linearityPct(), 1)}%  R2 ${f(calR2(), 4)}`, 120, 1, linColor());
-    } else {
-      centerText(calMv > 0 ? "NOW: 1-POINT CAL (AIR)" : "NOT CALIBRATED", 108, 1, calMv > 0 ? C_DIM : C_WARN);
-    }
-    centerText("HOLD: START AIR CAL", 144, 1, C_ACCENT);
-    centerText("SENSOR IN FRESH AIR", 156, 1, C_DIM);
-    centerText("TAP: BACK TO MAIN", 176, 1, C_DIM);
   }
 }
 
-function drawScreen() {
-  gfx.fillScreen(C_BG);
-  const valid = adsOk && calMv > 0 && !isNaN(o2Now);
-  const stable = isStable();
-  const sensorWeak = calMv > 0 && calMv < SENSOR_MIN_MV;
+function drawCalMenu() {
+  centerText("CALIBRATE", 44, 2, C_DIM);
+  drawButton(0, "1-POINT", "AIR ONLY");
+  drawButton(1, "2-POINT", `AIR + ${f(O2_CAL_PCT, 0)}% O2`);
+  drawButton(2, "BACK", null);
+}
 
+function drawDetailPage() {
+  centerText("DETAILS", 46, 2, C_DIM);
+  centerText(`${f(mvNow, 2)} mV`, 68, 3, C_FG);
+  if (calMv <= 0) { centerText("NOT CALIBRATED", 110, 2, C_WARN); return; }
+  centerText(`AIR ${f(calMv, 2)}`, 104, 2, C_FG);
+  if (twoPoint()) {
+    centerText(`O2 ${f(calO2Mv, 2)}`, 126, 2, C_FG);
+    centerText(`LIN ${f(linearityPct(), 1)}%`, 148, 2, linColor());
+    centerText(`R2 ${f(calR2(), 4)}`, 170, 2, linColor());
+  } else {
+    centerText("1-POINT CAL", 132, 2, C_DIM);
+  }
+}
+
+function drawMenu() {
+  centerText("MENU", 44, 2, C_DIM);
+  drawButton(0, "CALIBRATE", twoPoint() ? "NOW 2-POINT" : calMv > 0 ? "NOW 1-POINT (AIR)" : "NOT CALIBRATED");
+  drawButton(1, showDetails ? "DETAILS: ON" : "DETAILS: OFF", null);
+  drawButton(2, "BACK", null);
+}
+
+// The ring, battery and page dots stay put while the page content slides between them.
+function drawChrome() {
+  const valid = adsOk && calMv > 0 && !isNaN(o2Now);
   const frac = valid ? Math.max(0, Math.min(1, o2Now / 100)) : 0;
   gfx.fillArc(120, 120, 119, 111, 135, 405, 0x2104);
-  if (frac > 0) gfx.fillArc(120, 120, 119, 111, 135, 135 + 270 * frac, stable ? C_ACCENT : C_WARN);
+  if (frac > 0) gfx.fillArc(120, 120, 119, 111, 135, 135 + 270 * frac, isStable() ? C_ACCENT : C_WARN);
 
   if (BATT_DIVIDER > 0 && battV > 2.5) {
     const p = battPercent(battV);
@@ -716,10 +874,25 @@ function drawScreen() {
     gfx.drawRoundRect(100, 26, 34, 14, 3, C_DIM);
     gfx.fillRect(134, 30, 3, 6, C_DIM);
     gfx.fillRect(102, 28, Math.max(1, Math.trunc(30 * p / 100)), 10, c);
-    gfx.setTextSize(1); gfx.setTextColor(C_DIM); gfx.setCursor(140, 30); gfx.print(p + "%");
+    gfx.setTextSize(1); gfx.setTextColor(C_DIM); gfx.setCursor(140, 30);
+    gfx.print(screen === SCR_DETAIL ? `${f(battV, 2)}V` : p + "%");
   }
+  if (screen !== SCR_CAL) {
+    const p = pageList();
+    p.forEach((s, i) => {
+      const x = 120 - (p.length - 1) * 5 + i * 10;
+      if (s === screen) gfx.fillCircle(x, 218, 2, C_FG); else gfx.drawCircle(x, 218, 2, C_DIM);
+    });
+  }
+}
 
-  if (page === 0) {
+function drawContent() {
+  gfx.fillScreen(C_BG);
+  const valid = adsOk && calMv > 0 && !isNaN(o2Now);
+  const stable = isStable();
+  const sensorWeak = calMv > 0 && calMv < SENSOR_MIN_MV;
+
+  if (screen === SCR_MAIN) {
     centerText("O2", 50, 2, C_DIM);
     drawBigNumber(o2Now, 106, 76, valid ? (sensorWeak ? C_WARN : C_FG) : C_DIM, valid);
     gfx.setTextSize(3); gfx.setTextColor(C_DIM); gfx.setCursor(188, 125); gfx.print("%");
@@ -736,15 +909,12 @@ function drawScreen() {
         centerTextAt("@1.6", 154, 176, 1, C_DIM);
       }
     }
-  } else if (page === 1) {
-    centerText("DETAIL", 44, 2, C_DIM);
-    centerText(`${f(mvNow, 2)} mV`, 76, 3, C_FG);
-    centerText(`air cal ${f(calMv, 2)} mV`, 116, 1, C_DIM);
-    if (calO2Mv > 0) centerText(`O2 cal ${f(calO2Mv, 2)} mV`, 130, 1, C_DIM);
-    centerText(valid ? `${f(o2Now, 1)} %` : "--", 146, 2, C_FG);
-    if (BATT_DIVIDER > 0) centerText(`batt ${f(battV, 2)} V`, 172, 1, C_DIM);
-    if (twoPoint()) centerText(`LIN ${f(linearityPct(), 1)}%  R2 ${f(calR2(), 4)}`, 186, 1, linColor());
-    else if (calMv > 0) centerText("1-POINT CAL (AIR)", 186, 1, C_DIM);
+  } else if (screen === SCR_DETAIL) {
+    drawDetailPage();
+  } else if (screen === SCR_MENU) {
+    drawMenu();
+  } else if (calStep === CAL_MENU) {
+    drawCalMenu();
   } else {
     drawCalPage();
   }
@@ -756,47 +926,99 @@ function drawScreen() {
   else if (sensorWeak)       { st = "SENSOR WEAK";   sc = C_WARN; }
   else if (stable)           { st = "STABLE";        sc = C_OK; }
   else                       { st = "SETTLING";      sc = C_WARN; }
-  if (page === 2)            { st = "";              sc = C_BG; }
+  if (screen >= SCR_MENU)    { st = "";              sc = C_BG; }
   if (millis() < msgUntil)   { st = msg;             sc = C_ACCENT; }
   centerText(st, 200, 1, sc);
-  for (let i = 0; i < 3; i++) {
-    if (i === page) gfx.fillCircle(112 + i * 8, 218, 2, C_FG);
-    else            gfx.drawCircle(112 + i * 8, 218, 2, C_DIM);
+}
+
+// Page turn, as slideTo() in the sketch. The sketch blocks for the slide; here each frame is drawn from step().
+const SLIDE_MS = 260;
+const slideSnap = document.createElement("canvas"), slideTmp = document.createElement("canvas");
+slideSnap.width = slideSnap.height = slideTmp.width = slideTmp.height = 480;
+let slide = null;
+function slideTo(to, dir) {
+  if (to === screen) return;
+  drawContent();
+  slideSnap.getContext("2d").drawImage(lcd, 0, 0);
+  screen = to;
+  slide = { dir, t0: millis() };
+}
+
+function drawScreen() {
+  drawContent();
+  if (slide) {
+    const p = Math.min(1, (millis() - slide.t0) / SLIDE_MS), off = 240 * (1 - Math.pow(1 - p, 3));
+    slideTmp.getContext("2d").drawImage(lcd, 0, 0);
+    gfx.fillScreen(C_BG);
+    const newX = slide.dir > 0 ? 240 - off : off - 240, oldX = slide.dir > 0 ? -off : off;
+    ctx.drawImage(slideTmp, newX, 0, 240, 240);
+    ctx.drawImage(slideSnap, oldX, 0, 240, 240);
+    if (p >= 1) slide = null;
   }
+  drawChrome();
   gfx.flush();
 }
 
 function setup() {
   bootAt = performance.now();
   buf = new Array(AVG_N).fill(0); bufIdx = 0; bufCnt = 0;
-  mvNow = 0; o2Now = 0; battV = 0; page = 0; msgUntil = 0; msg = ""; calStep = CAL_MENU;
+  mvNow = 0; o2Now = 0; battV = 0; screen = SCR_MAIN; slide = null; pressedRow = -1; msgUntil = 0; msg = ""; calStep = CAL_MENU;
   tSample = 0; tDraw = 0; bdiv = 0;
-  touch = { down: false, downAt: 0, longDone: false };
+  touch = { down: false, downAt: 0, x: 0, y: 0 };
   gfx.fillScreen(C_BG);
   adsOk = hw.adcWired;
   calMv = prefs.get("air");
   calO2Mv = prefs.get("o2");
+  showDetails = prefs.get("det") > 0;
   booting = true; bootSkip = false;
+}
+
+function pageList() { return showDetails ? [SCR_MAIN, SCR_DETAIL, SCR_MENU] : [SCR_MAIN, SCR_MENU]; }
+function onSwipe(dir) {
+  if (screen === SCR_CAL) { if (calStep === CAL_MENU && dir < 0) slideTo(SCR_MENU, -1); return; }
+  const p = pageList(), i = p.indexOf(screen);
+  if (i >= 0 && i + dir >= 0 && i + dir < p.length) slideTo(p[i + dir], dir);
+}
+
+function onTap(row) {
+  if (screen === SCR_MAIN || screen === SCR_DETAIL) return;
+  if (screen === SCR_MENU) {
+    if (row === 0) { calStep = CAL_MENU; slideTo(SCR_CAL, 1); }
+    if (row === 1) { showDetails = !showDetails; prefs.put("det", showDetails ? 1 : 0); }
+    if (row === 2) slideTo(SCR_MAIN, -1);
+    return;
+  }
+  switch (calStep) {
+    case CAL_MENU:
+      if (row === 0 || row === 1) { calTwo = row === 1; calStartSample(CAL_AIR); }
+      if (row === 2) slideTo(SCR_MENU, -1);
+      break;
+    case CAL_AIR: calStep = CAL_MENU; break;
+    case CAL_O2:  calStep = CAL_AIR_OK; break;
+    case CAL_AIR_OK:
+      if (!calTwo)        screen = SCR_MAIN;
+      else if (row === 1) calStartSample(CAL_O2);
+      else if (row === 2) screen = SCR_MAIN;
+      break;
+    case CAL_O2_OK: screen = SCR_MAIN; break;
+  }
 }
 
 function handleTouch() {
   if (!hw.touching && !touch.down) return;
   const finger = hw.touching;
-  if (finger && !touch.down) { touch.down = true; touch.downAt = millis(); touch.longDone = false; }
-  else if (finger && touch.down && !touch.longDone && millis() - touch.downAt > 1500) {
-    touch.longDone = true;
-    if (page === 2) {
-      if (calStep === CAL_MENU || calStep === CAL_O2_OK) calStartSample(CAL_AIR);
-      else if (calStep === CAL_AIR_OK) calStartSample(CAL_O2);
-    } else if (page === 0) flash("CAL: TAP TO PAGE 3");
-  }
-  else if (!finger && touch.down) {
+  if (finger) { touch.x = hw.touchX; touch.y = hw.touchY; }
+  if (finger && !touch.down) {
+    touch.down = true; touch.downAt = millis(); lastTouch = touch.downAt; touch.sx = touch.x; touch.sy = touch.y;
+    pressedRow = buttonAt(touch.x, touch.y); redraw = true;
+  } else if (!finger && touch.down) {
     touch.down = false;
-    if (!touch.longDone && millis() - touch.downAt < 600) {
-      if (page === 2 && calStep === CAL_AIR) calStep = CAL_MENU;
-      else if (page === 2 && calStep === CAL_O2) calStep = CAL_AIR_OK;
-      else { page = (page + 1) % 3; calStep = CAL_MENU; }
-    }
+    const row = pressedRow;
+    pressedRow = -1; redraw = true; lastTouch = millis();
+    const dx = touch.x - touch.sx, dy = touch.y - touch.sy;
+    if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > 2 * Math.abs(dy)) { onSwipe(dx < 0 ? 1 : -1); return; }
+    if (row >= 0 && buttonAt(touch.x, touch.y) !== row) return;
+    if (millis() - touch.downAt < 1500) onTap(row);
   }
 }
 
@@ -809,6 +1031,8 @@ function serialCommand(c) {
 function loop() {
   handleTouch();
   calTick();
+  const idleMenu = screen === SCR_MENU || (screen === SCR_CAL && calStep === CAL_MENU);
+  if (idleMenu && millis() - lastTouch > MENU_TIMEOUT_MS) { screen = SCR_MAIN; redraw = true; }
   if (millis() - tSample >= SAMPLE_MS) {
     tSample = millis();
     if (adsOk) {
@@ -825,6 +1049,7 @@ function loop() {
       }
     }
   }
+  if (redraw || slide) { redraw = false; drawScreen(); }
   if (millis() - tDraw >= 250) {
     tDraw = millis();
     drawScreen();
@@ -878,10 +1103,23 @@ const battEl = document.getElementById("batt"), battValEl = document.getElementB
 battEl.addEventListener("input", () => { hw.battV = +battEl.value; battValEl.textContent = `${hw.battV.toFixed(2)} V`; });
 document.getElementById("adc").addEventListener("change", e => { hw.adcWired = e.target.checked; });
 document.getElementById("reboot").addEventListener("click", () => { serialPrint("--- power cycle ---", "cmd"); setup(); });
+const editionEl = document.getElementById("edition");
+editionEl.value = new URLSearchParams(location.search).get("edition") === "kyle" ? "kyle" : "fss";
+setEdition(editionEl.value);
+editionEl.addEventListener("change", () => {
+  setEdition(editionEl.value);
+  const u = new URL(location.href); u.searchParams.set("edition", editionEl.value); history.replaceState(null, "", u);
+  serialPrint("--- power cycle ---", "cmd"); setup();
+});
 
 /* touch: pointer held on the glass = finger on the CST816 */
-const holdBar = document.getElementById("hold");
-lcd.addEventListener("pointerdown", e => { hw.touching = true; lcd.setPointerCapture(e.pointerId); e.preventDefault(); });
+function touchPos(e) {
+  const r = lcd.getBoundingClientRect();
+  hw.touchX = Math.round((e.clientX - r.left) * 240 / r.width);
+  hw.touchY = Math.round((e.clientY - r.top) * 240 / r.height);
+}
+lcd.addEventListener("pointerdown", e => { touchPos(e); hw.touching = true; lcd.setPointerCapture(e.pointerId); e.preventDefault(); });
+lcd.addEventListener("pointermove", e => { if (hw.touching) touchPos(e); });
 ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => lcd.addEventListener(t, () => { hw.touching = false; }));
 lcd.addEventListener("contextmenu", e => e.preventDefault());
 
@@ -919,7 +1157,6 @@ function step() {
   const target = hw.cellAirMv * hw.gasO2 / AIR_O2 * gain;
   hw.cellMv += (target - hw.cellMv) * (1 - Math.exp(-dt / CELL_TAU_S));
   if (booting) bootStep(); else loop();
-  holdBar.style.width = touch.down && !touch.longDone ? `${Math.min(100, (millis() - touch.downAt) / 15)}%` : "0";
 }
 setup();
 setInterval(step, 10);

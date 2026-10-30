@@ -512,6 +512,9 @@ cover_front    = 32;     // half-angle of the bead gap at the front (deg)
 cover_flap_a   = 23;     // button guard: half-angle of the flap over the power button (deg)
 cover_flap_z0  = 1.0;    // its lower edge (the tube starts at z = 0)
 cover_rib_off  = 7.6;    // its two inner ribs, either side of the button (mm from its centre)
+cover_flap_t   = 2.6;    // flap thickness (stiffness goes with its cube: 2.6 is ~4x the 1.6 skirt)
+cover_rib_w    = 2.4;    // side rib width
+cover_rib_b    = 1.0;    // bottom rib height, along the flap's lower edge
 
 module screen_cover() {
     zb = z_rim0;                                         // bezel's lower edge
@@ -530,10 +533,16 @@ module screen_cover() {
             // button guard: a flap down over the power button, so it can't be pressed
             // in a bag. Two ribs inside it rest on the puck wall either side of the
             // button, so a push on the flap goes into the puck, not the button.
+            // The ribs make a U-shaped frame round the button (both sides and the
+            // bottom), so the thick flap is held on three edges.
+            rf = ri + cover_flap_t;                               // flap's outer radius
             rotate([0, 0, btn_angle - cover_flap_a]) rotate_extrude(angle = 2*cover_flap_a, $fn = 192)
-                polygon([[ri, z0 + 0.6], [ri, cover_flap_z0], [ro - 0.6, cover_flap_z0], [ro, cover_flap_z0 + 0.6], [ro, z0 + 0.6]]);
+                polygon([[ri, z0 + 0.6], [ri, cover_flap_z0], [rf - 0.8, cover_flap_z0], [rf, cover_flap_z0 + 0.8],
+                         [rf, z0 - (rf - ro)], [ro, z0 + 0.6]]);   // 45° step back to the skirt above
             for (s = [-1, 1]) rotate([0, 0, btn_angle + s * cover_rib_off / (od/2) * 180 / PI])
-                translate([od/2 + 0.3, -0.8, cover_flap_z0]) cube([ri - od/2 - 0.3 + 0.2, 1.6, z0 - cover_flap_z0 + 0.6]);
+                translate([od/2 + 0.3, -cover_rib_w/2, cover_flap_z0]) cube([ri - od/2 - 0.3 + 0.2, cover_rib_w, z0 - cover_flap_z0 + 0.6]);
+            rotate([0, 0, btn_angle - cover_flap_a]) rotate_extrude(angle = 2*cover_flap_a, $fn = 192)
+                translate([od/2 + 0.3, cover_flap_z0]) square([ri - od/2 - 0.3 + 0.2, cover_rib_b]);
             // pull tab at the back (over the USB-C)
             // (rounded corners, 1.2 mm, and 0.5 mm fillets on its top and bottom edges)
             rotate([0, 0, usb_angle]) translate([ro - 1.5, 0, zt + cover_top - 1.6]) minkowski() {
@@ -545,8 +554,8 @@ module screen_cover() {
         // round the button guard's two lower corners (r 2)
         for (s = [-1, 1]) rotate([0, 0, btn_angle + s * cover_flap_a]) translate([0, 0, cover_flap_z0])
             difference() {
-                translate([od/2 - 0.5, s > 0 ? -2 : 0, -1]) cube([ro - od/2 + 1.5, 2, 3]);
-                translate([od/2 - 1, -s * 2, 2]) rotate([0, 90, 0]) cylinder(r = 2, h = ro - od/2 + 3, $fn = 32);
+                translate([od/2 - 0.5, s > 0 ? -2 : 0, -1]) cube([ri + cover_flap_t - od/2 + 1.5, 2, 3]);
+                translate([od/2 - 1, -s * 2, 2]) rotate([0, 90, 0]) cylinder(r = 2, h = ri + cover_flap_t - od/2 + 3, $fn = 32);
             }
         // no bead at the front, where the collar is
         translate([0, 0, z0 - 1]) rotate([0, 0, 90 - cover_front])
